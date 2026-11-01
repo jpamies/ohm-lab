@@ -124,7 +124,9 @@
           <label for="n1-r"><span data-i18n="n1.resistance"></span> <output id="n1-r-out" for="n1-r"></output></label>
           <input type="range" id="n1-r">
         </div>
+        <div class="modes-box" id="n1-modes" hidden></div>
         <p class="calc" id="n1-calc" aria-live="polite"></p>
+        <p class="calc calc-power" id="n1-power"></p>
       </div>
 
       <h2 class="pixel h-section" data-i18n="n1.challenges"></h2>
@@ -185,6 +187,26 @@
           </div>
         </form>
         <p class="feedback" id="n3-feedback" aria-live="polite"></p>
+        <details class="calc-box" id="n3-calc-box">
+          <summary class="btn btn-small btn-stone" data-i18n="n3.calc"></summary>
+          <div class="calc-inner">
+            <label for="n3-calc-in" data-i18n="n3.calcLabel"></label>
+            <div class="answer-row">
+              <input id="n3-calc-in" type="text" inputmode="decimal" autocomplete="off" spellcheck="false">
+              <output id="n3-calc-out" for="n3-calc-in" class="calc-out">=</output>
+            </div>
+            <div class="calc-keys" role="group" aria-label="+ − × ÷ ( )">
+              <button type="button" class="btn btn-small btn-stone" data-key="+">+</button>
+              <button type="button" class="btn btn-small btn-stone" data-key="−">−</button>
+              <button type="button" class="btn btn-small btn-stone" data-key="×">×</button>
+              <button type="button" class="btn btn-small btn-stone" data-key="÷">÷</button>
+              <button type="button" class="btn btn-small btn-stone" data-key="(">(</button>
+              <button type="button" class="btn btn-small btn-stone" data-key=")">)</button>
+              <button type="button" class="btn btn-small btn-redstone" data-key="C">C</button>
+            </div>
+            <button type="button" class="btn btn-small btn-gold" id="n3-calc-use" data-i18n="n3.calcUse"></button>
+          </div>
+        </details>
       </div>
       <div class="panel n3-summary" id="n3-summary" hidden></div>
     </section>
@@ -209,6 +231,8 @@
       <li data-i18n="help.R"></li>
       <li data-i18n="help.units"></li>
       <li data-i18n="help.led"></li>
+      <li data-i18n="help.P"></li>
+      <li data-i18n="help.assoc"></li>
     </ul>
     <form method="dialog"><button class="btn btn-grass" data-i18n="help.close"></button></form>
   </dialog>

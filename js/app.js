@@ -3,10 +3,11 @@ import { CLAVE_SECRETA, IDIOMA_POR_DEFECTO } from './config.js';
 import { t, setLang, getLang, applyTranslations } from './i18n.js';
 import { createStore, recordLevel } from './storage.js';
 import {
-  current, formatNumber, formatOhms, parseUserNumber, withinTolerance, ledCurrent, minLedResistance
+  current, formatNumber, formatOhms, parseUserNumber, withinTolerance, ledCurrent, minLedResistance, evaluateExpression
 } from './physics.js';
 import {
   LEVEL1, LED, LEVEL3, LEVEL_IDS, isTargetCurrent, checkHalfCurrent, canHalveFrom, scoreLevel1,
+  totalResistance, power, isTargetPower,
   prepareLevel2, evaluateLed, validateRound, ledBrightness, roundPoints, scoreLevel2,
   generateQuestion, answerPoints, starsLevel3, isUnlocked, allDone, LEVEL2_ROUNDS
 } from './levels.js';
@@ -300,6 +301,7 @@ $('#diploma-btn').addEventListener('click', async () => {
       code,
       results,
       url,
+      shortUrl: (() => { const u = new URL('verificar.html', location.href); return u.host + u.pathname; })(),
       dateText: pdfSafe(dateText(store.state.finishedAt)),
       texts: {
         title: t('diploma.title'),
@@ -312,6 +314,7 @@ $('#diploma-btn').addEventListener('click', async () => {
         dateLabel: t('diploma.date'),
         scan: t('diploma.scan'),
         codeLabel: t('diploma.codeLabel'),
+        verifyAt: t('diploma.verifyAt'),
         footer: t('footer')
       }
     });
@@ -392,8 +395,18 @@ function confetti() {
 
 /* ═══════════════════════ Nivel 1 · El agua y la corriente ═══════════════════════ */
 
-const n1 = { v: LEVEL1.voltage.initial, r: LEVEL1.resistance.initial, step: 0, start: null, mistakes: 0, message: '', feedbackClass: '' };
+const n1 = {};
 let animFrame = null;
+
+function resetLevel1State() {
+  Object.assign(n1, {
+    v: LEVEL1.voltage.initial, r: LEVEL1.resistance.initial, mode: 'single', step: 0, start: null,
+    mistakes: 0, failedQuizzes: new Set(), visited: new Set(), message: '', feedbackClass: '', doneMsgs: [], speed: 0.1
+  });
+}
+resetLevel1State();
+
+const rTotal = () => totalResistance(n1.r, n1.mode);
 
 function brightness(i) {
   return Math.max(0, Math.min(1, Math.sqrt(i / 3)));
@@ -407,7 +420,7 @@ function glowWord(b) {
 }
 
 function startLevel1() {
-  Object.assign(n1, { v: LEVEL1.voltage.initial, r: LEVEL1.resistance.initial, step: 0, start: null, mistakes: 0, message: '', feedbackClass: '' });
+  resetLevel1State();
   $('#n1-done').hidden = true;
   const vIn = $('#n1-v');
   const rIn = $('#n1-r');
@@ -415,6 +428,7 @@ function startLevel1() {
   Object.assign(rIn, { min: LEVEL1.resistance.min, max: LEVEL1.resistance.max, step: LEVEL1.resistance.step, value: n1.r });
   buildCircuitSvg();
   buildWaterSvg();
+  renderModes();
   updateLevel1();
   renderChallenges();
 
@@ -438,6 +452,39 @@ function onSlider() {
 $('#n1-v').addEventListener('input', onSlider);
 $('#n1-r').addEventListener('input', onSlider);
 
+// ── Selector de montaje (se desbloquea en el reto 4) ──
+function renderModes() {
+  const box = $('#n1-modes');
+  const unlocked = n1.step >= 3;
+  box.hidden = !unlocked;
+  if (!unlocked) return;
+  box.innerHTML = '';
+  box.append(el('p', { class: 'modes-label', id: 'n1-modes-label', text: t('n1.mode') }));
+  const group = el('div', { class: 'modes', role: 'radiogroup', 'aria-labelledby': 'n1-modes-label' });
+  LEVEL1.modes.forEach(mode => {
+    const on = n1.mode === mode;
+    group.append(el('button', {
+      type: 'button', role: 'radio', 'aria-checked': on ? 'true' : 'false',
+      class: `btn btn-small mode-btn ${on ? 'btn-gold' : 'btn-stone'}`,
+      html: `<span class="mode-icon mode-${mode}" aria-hidden="true"></span>${esc(t(`n1.mode.${mode}`))}`,
+      onclick: () => setMode(mode)
+    }));
+  });
+  box.append(group);
+}
+
+function setMode(mode) {
+  n1.mode = mode;
+  if (mode !== 'single') n1.visited.add(mode);
+  buildCircuitSvg();
+  renderModes();
+  updateLevel1();
+  if (n1.step === 3) renderChallenges();
+  checkChallenges();
+  const btn = document.querySelector('#n1-modes .mode-btn[aria-checked="true"]');
+  if (btn) btn.focus();
+}
+
 // ── SVG del circuito ──
 const CIRCUIT_LOOP = [[40, 40], [280, 40], [280, 180], [40, 180]];
 let circuitDots = [];
@@ -451,8 +498,30 @@ function svgEl(tag, attrs = {}) {
   return node;
 }
 
+function resistorSvg(x, y, w, labelId, labelY = -6) {
+  return `
+    <g transform="translate(${x} ${y})" shape-rendering="crispEdges">
+      <rect width="${w}" height="28" fill="#d9b382" stroke="#111" stroke-width="3"/>
+      <rect x="${w * 0.17}" y="0" width="7" height="28" fill="#8b4513"/>
+      <rect x="${w * 0.36}" y="0" width="7" height="28" fill="#111"/>
+      <rect x="${w * 0.55}" y="0" width="7" height="28" fill="#ff4d6d"/>
+      <rect x="${w * 0.78}" y="0" width="5" height="28" fill="#ffd34d"/>
+      <text x="${w / 2}" y="${labelY}" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" class="c-rtext">30 Ω</text>
+    </g>`;
+}
+
 function buildCircuitSvg() {
   const svg = $('#n1-circuit');
+  let resistors = '';
+  let extraWires = '';
+  if (n1.mode === 'series') {
+    resistors = resistorSvg(84, 26, 70) + resistorSvg(178, 26, 70);
+  } else if (n1.mode === 'parallel') {
+    extraWires = '<path d="M104 40 V104 H216 V40" stroke="#e07b39" stroke-width="8" fill="none" shape-rendering="crispEdges"/>';
+    resistors = resistorSvg(125, 26, 70) + resistorSvg(125, 90, 70, null, 46);
+  } else {
+    resistors = resistorSvg(118, 26, 84);
+  }
   svg.innerHTML = `
     <defs>
       <radialGradient id="glow"><stop offset="0" stop-color="#fff7b0"/><stop offset=".5" stop-color="#ffd34d" stop-opacity=".7"/><stop offset="1" stop-color="#ffd34d" stop-opacity="0"/></radialGradient>
@@ -462,6 +531,7 @@ function buildCircuitSvg() {
     <g stroke="#e07b39" stroke-width="8" fill="none" shape-rendering="crispEdges">
       <path d="M40 40 H280 V180 H40 Z"/>
     </g>
+    ${extraWires}
     <g id="c-dots"></g>
     <!-- Pila -->
     <g transform="translate(16 82)" shape-rendering="crispEdges">
@@ -471,15 +541,7 @@ function buildCircuitSvg() {
       <text x="24" y="12" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">+</text>
       <text x="24" y="44" text-anchor="middle" font-size="13" font-weight="800" fill="#ffd34d" id="c-vtext">9 V</text>
     </g>
-    <!-- Resistencia -->
-    <g transform="translate(118 26)" shape-rendering="crispEdges">
-      <rect width="84" height="28" fill="#d9b382" stroke="#111" stroke-width="3"/>
-      <rect x="14" y="0" width="8" height="28" fill="#8b4513"/>
-      <rect x="30" y="0" width="8" height="28" fill="#111"/>
-      <rect x="46" y="0" width="8" height="28" fill="#ff4d6d"/>
-      <rect x="66" y="0" width="6" height="28" fill="#ffd34d"/>
-      <text x="42" y="-6" text-anchor="middle" font-size="13" font-weight="800" fill="#fff" id="c-rtext">30 Ω</text>
-    </g>
+    ${resistors}
     <!-- Bombilla -->
     <circle id="c-glow" cx="280" cy="110" r="60" fill="url(#glow)" opacity=".5"/>
     <g transform="translate(256 82)" shape-rendering="crispEdges">
@@ -520,6 +582,12 @@ function pipeWidth(r) {
   return 4 + 24 * (1 - Math.log10(r) / 2);
 }
 
+// Tramos estrechos de la tubería según el montaje
+function narrowSections() {
+  if (n1.mode === 'series') return [[112, 46], [196, 46]];
+  return [[150, 60]];
+}
+
 function buildWaterSvg() {
   const svg = $('#n1-water');
   svg.innerHTML = `
@@ -541,9 +609,16 @@ function buildWaterSvg() {
     <!-- Tubería -->
     <rect x="90" y="166" width="190" height="30" fill="#6b6b6b" shape-rendering="crispEdges"/>
     <rect id="w-pipe" x="90" y="170" width="190" height="22" fill="#2f80ff" shape-rendering="crispEdges"/>
-    <rect id="w-narrow-top" x="150" y="166" width="60" height="0" fill="#e07b39" stroke="#7a3d12" stroke-width="2" shape-rendering="crispEdges"/>
-    <rect id="w-narrow-bot" x="150" y="196" width="60" height="0" fill="#e07b39" stroke="#7a3d12" stroke-width="2" shape-rendering="crispEdges"/>
-    <text x="180" y="158" text-anchor="middle" font-size="11" font-weight="800" fill="#1d1b2f" id="w-rtext">30 Ω</text>
+    <g id="w-narrows"></g>
+    <!-- Tubería paralela (solo en el montaje en paralelo) -->
+    <g id="w-parallel" shape-rendering="crispEdges">
+      <rect x="130" y="128" width="100" height="30" fill="#6b6b6b"/>
+      <rect x="130" y="132" width="100" height="22" fill="#2f80ff"/>
+      <rect x="130" y="128" width="8" height="38" fill="#6b6b6b"/>
+      <rect x="222" y="128" width="8" height="38" fill="#6b6b6b"/>
+      <g id="w-narrows-2"></g>
+    </g>
+    <text x="180" y="124" text-anchor="middle" font-size="11" font-weight="800" fill="#1d1b2f" id="w-rtext">30 Ω</text>
     <g id="w-dots"></g>
     <!-- Rueda hidráulica -->
     <g id="w-wheel" transform="translate(284 150)">
@@ -563,46 +638,55 @@ function buildWaterSvg() {
   waterDots.forEach(d => { d.node = svgEl('rect', { width: 6, height: 6, fill: '#e6f4ff' }); g.append(d.node); });
 }
 
+function narrowRects(sections, yTop, pw) {
+  const block = Math.max(0, (22 - pw) / 2 + 4);
+  return sections.map(([x, w]) => `
+    <rect x="${x}" y="${yTop}" width="${w}" height="${block.toFixed(1)}" fill="#e07b39" stroke="#7a3d12" stroke-width="2"/>
+    <rect x="${x}" y="${(yTop + 30 - block).toFixed(1)}" width="${w}" height="${block.toFixed(1)}" fill="#e07b39" stroke="#7a3d12" stroke-width="2"/>`).join('');
+}
+
 function updateLevel1() {
-  const { v, r } = n1;
-  const i = current(v, r);
+  const { v, r, mode } = n1;
+  const rt = rTotal();
+  const i = current(v, rt);
+  const p = power(v, i);
   const b = brightness(i);
   $('#n1-v-out').textContent = `${fmt(v, 1)} V`;
   $('#n1-r-out').textContent = `${fmt(r, 0)} Ω`;
   $('#n1-v').setAttribute('aria-valuetext', `${fmt(v, 1)} V`);
   $('#n1-r').setAttribute('aria-valuetext', `${fmt(r, 0)} Ω`);
-  $('#n1-calc').textContent = t('n1.calc', { v: fmt(v, 1), r: fmt(r, 0), i: fmt(i, 2) });
+  const params = { v: fmt(v, 1), r: fmt(r, 0), rt: fmt(rt, 1), i: fmt(i, 3), p: fmt(p, 2) };
+  $('#n1-calc').textContent = mode === 'single' ? t('n1.calc', params) : t(`n1.calc.${mode}`, params);
+  $('#n1-power').textContent = t('n1.power', params);
 
   // Circuito
   const c = $('#n1-circuit');
-  c.setAttribute('aria-label', t('n1.circuitAlt', { v: fmt(v, 1), r: fmt(r, 0), i: fmt(i, 2), glow: glowWord(b) }));
+  c.setAttribute('aria-label', t('n1.circuitAlt', { v: params.v, r: params.rt, i: params.i, glow: glowWord(b) }));
   c.querySelector('#c-vtext').textContent = `${fmt(v, 1)} V`;
-  c.querySelector('#c-rtext').textContent = `${fmt(r, 0)} Ω`;
-  c.querySelector('#c-itext').textContent = `I = ${fmt(i, 2)} A`;
+  c.querySelectorAll('.c-rtext').forEach(n => { n.textContent = `${fmt(r, 0)} Ω`; });
+  c.querySelector('#c-itext').textContent = `I = ${fmt(i, 2)} A · P = ${fmt(p, 1)} W`;
   c.querySelector('#c-glow').setAttribute('opacity', (0.05 + b * 0.95).toFixed(2));
   c.querySelector('#c-glow').setAttribute('r', (30 + b * 50).toFixed(0));
   c.querySelector('#c-bulb').setAttribute('fill', b > 0.1 ? `hsl(52 100% ${55 + b * 35}%)` : '#d8d4c0');
 
   // Agua
   const w = $('#n1-water');
-  w.setAttribute('aria-label', t('n1.waterAlt', { v: fmt(v, 1), r: fmt(r, 0), i: fmt(i, 2) }));
+  w.setAttribute('aria-label', t('n1.waterAlt', { v: params.v, r: params.rt, i: params.i }));
   const top = 193 - (v / LEVEL1.voltage.max) * 148;
   w.querySelector('#w-water').setAttribute('y', top.toFixed(1));
   w.querySelector('#w-water').setAttribute('height', (193 - top).toFixed(1));
   w.querySelector('#w-surface').setAttribute('y', top.toFixed(1));
   w.querySelector('#w-vtext').textContent = `${fmt(v, 1)} V`;
-  w.querySelector('#w-rtext').textContent = `${fmt(r, 0)} Ω`;
+  w.querySelector('#w-rtext').textContent = mode === 'single' ? `${fmt(r, 0)} Ω` : `${t(`n1.mode.${mode}`)}: ${fmt(rt, 1)} Ω`;
   const pw = pipeWidth(r);
-  const block = (22 - pw) / 2;
-  w.querySelector('#w-narrow-top').setAttribute('height', Math.max(0, block + 4).toFixed(1));
-  const bot = w.querySelector('#w-narrow-bot');
-  bot.setAttribute('height', Math.max(0, block + 4).toFixed(1));
-  bot.setAttribute('y', (196 - Math.max(0, block + 4)).toFixed(1));
+  w.querySelector('#w-narrows').innerHTML = narrowRects(narrowSections(), 166, pw);
+  w.querySelector('#w-parallel').style.display = mode === 'parallel' ? '' : 'none';
+  w.querySelector('#w-narrows-2').innerHTML = mode === 'parallel' ? narrowRects([[150, 60]], 128, pw) : '';
   w.querySelector('#w-itext').textContent = `${fmt(i, 2)} A`;
   w.querySelector('#w-l1').textContent = `▲ ${t('n1.tank')}`;
   w.querySelector('#w-l2').textContent = `▬ ${t('n1.pipe')}`;
   w.querySelector('#w-l3').textContent = `➜ ${t('n1.flow')}`;
-  n1.speed = 0.02 + 0.6 * Math.sqrt(i / 12);
+  n1.speed = 0.02 + 0.6 * Math.sqrt(Math.min(i, 24) / 12);
   if (reducedMotion) animateLevel1(0);
 }
 
@@ -614,10 +698,11 @@ function animateLevel1(dt) {
     d.node.setAttribute('y', (y - 4).toFixed(1));
   });
   const pw = pipeWidth(n1.r);
+  const sections = narrowSections();
   waterDots.forEach((d, k) => {
     const s = ((d.s + phase * 2) % 1 + 1) % 1;
     const x = 92 + s * 186;
-    const inNarrow = x > 150 && x < 210;
+    const inNarrow = sections.some(([a, w]) => x > a && x < a + w);
     const spread = inNarrow ? pw / 2 - 3 : 8;
     const y = 181 + (k % 3 - 1) * Math.max(0, spread);
     d.node.setAttribute('x', x.toFixed(1));
@@ -632,25 +717,32 @@ function animateLevel1(dt) {
 function renderChallenges() {
   const list = $('#n1-challenges');
   list.innerHTML = '';
-  const defs = [
-    { title: t('n1.c1') },
-    { title: t('n1.c2') },
-    { title: t('n1.c3') }
-  ];
-  defs.forEach((d, k) => {
+  for (let k = 0; k < LEVEL1.challenges; k++) {
     const state = k < n1.step ? 'done' : k === n1.step ? 'active' : 'locked';
     const li = el('li', { class: `challenge ${state}` });
     li.append(
       el('div', { class: 'ch-head' }, [
         el('span', { class: 'ch-icon', 'aria-hidden': 'true', text: state === 'done' ? '✔' : state === 'active' ? '▶' : '🔒' }),
-        el('p', { class: 'ch-title', text: d.title }),
+        el('p', { class: 'ch-title', text: t(`n1.c${k + 1}`) }),
         el('span', { class: 'ch-state', text: t(`challenge.${state === 'done' ? 'done' : state === 'active' ? 'pending' : 'locked'}`) })
       ])
     );
     if (state === 'active') li.append(challengeBody(k));
-    if (state === 'done' && n1.doneMsgs?.[k]) li.append(el('p', { class: 'ch-msg ok', text: n1.doneMsgs[k] }));
+    if (state === 'done' && n1.doneMsgs[k]) li.append(el('p', { class: 'ch-msg ok', text: n1.doneMsgs[k] }));
     list.append(li);
+  }
+}
+
+function quizGroup(label, options, prefix, onAnswer) {
+  const group = el('div', { class: 'quiz', role: 'group', 'aria-label': label });
+  options.forEach((opt, idx) => {
+    group.append(el('button', {
+      type: 'button', class: 'btn btn-stone quiz-opt', 'data-opt': opt,
+      text: `${'abcd'[idx]}) ${t(`${prefix}.${opt}`)}`,
+      onclick: e => onAnswer(opt, e.currentTarget)
+    }));
   });
+  return group;
 }
 
 function challengeBody(k) {
@@ -674,15 +766,17 @@ function challengeBody(k) {
     }));
   }
   if (k === 2) {
-    const group = el('div', { class: 'quiz', role: 'group', 'aria-label': t('n1.c3') });
-    LEVEL1.quizOptions.forEach((opt, idx) => {
-      group.append(el('button', {
-        type: 'button', class: 'btn btn-stone quiz-opt', 'data-opt': opt,
-        text: `${'abcd'[idx]}) ${t(`n1.c3.${opt}`)}`,
-        onclick: e => answerQuiz(opt, e.currentTarget)
-      }));
-    });
-    body.append(group);
+    body.append(quizGroup(t('n1.c3'), LEVEL1.quizOptions, 'n1.c3', (opt, btn) => answerQuiz(2, opt, btn)));
+  }
+  if (k === 3) {
+    body.append(el('p', { class: 'muted', text: t('n1.c4.hint') }));
+    const s = n1.visited.has('series');
+    const p = n1.visited.has('parallel');
+    body.append(el('p', { class: 'tried', text: t('n1.c4.tried', { s: s ? '✔' : '✘', p: p ? '✔' : '✘' }) }));
+    if (s && p) body.append(quizGroup(t('n1.c4'), LEVEL1.quiz2Options, 'n1.c4', (opt, btn) => answerQuiz(3, opt, btn)));
+  }
+  if (k === 4) {
+    body.append(el('p', { class: 'muted', text: t('n1.c5.hint') }));
   }
   body.append(el('p', { class: `ch-msg ${n1.feedbackClass}`, id: 'n1-msg', 'aria-live': 'polite', text: n1.message }));
   return body;
@@ -696,43 +790,51 @@ function setChallengeMsg(text, cls) {
 }
 
 function completeChallenge(k, msg) {
-  n1.doneMsgs = n1.doneMsgs || [];
   n1.doneMsgs[k] = msg;
   n1.step = k + 1;
   n1.message = '';
   n1.feedbackClass = '';
   renderChallenges();
-  if (n1.step === 3) {
-    finishLevel('n1', scoreLevel1(n1.mistakes), '#n1-done', t('n1.done'));
+  renderModes();
+  if (n1.step === 3) toast(`🔓 ${t('n1.modesUnlocked')}`);
+  if (n1.step === LEVEL1.challenges) {
+    finishLevel('n1', scoreLevel1(n1.mistakes, n1.failedQuizzes.size), '#n1-done', t('n1.done'));
   }
 }
 
 function checkChallenges() {
-  if (n1.step === 0 && isTargetCurrent(n1.v, n1.r)) {
-    completeChallenge(0, t('n1.c1.ok', { v: fmt(n1.v, 1), r: fmt(n1.r, 0) }));
+  const rt = rTotal();
+  if (n1.step === 0 && isTargetCurrent(n1.v, rt)) {
+    completeChallenge(0, t('n1.c1.ok', { v: fmt(n1.v, 1), r: fmt(rt, 0) }));
     return;
   }
   if (n1.step === 1 && n1.start) {
-    const res = checkHalfCurrent(n1.start, n1.v, n1.r);
+    const res = checkHalfCurrent(n1.start, n1.v, rt);
     if (res === 'voltage-changed') setChallengeMsg(t('n1.c2.voltage', { v: fmt(n1.start.v, 1) }), 'warn');
-    else if (res === 'ok') completeChallenge(1, t('n1.c2.ok', { r0: fmt(n1.start.r, 0), r: fmt(n1.r, 0) }));
+    else if (res === 'ok') completeChallenge(1, t('n1.c2.ok', { r0: fmt(n1.start.r, 0), r: fmt(rt, 0) }));
     else if (n1.feedbackClass === 'warn') {
       const i0 = current(n1.start.v, n1.start.r);
       setChallengeMsg(t('n1.c2.started', { v: fmt(n1.start.v, 1), i: fmt(i0, 3), half: fmt(i0 / 2, 3) }), 'info');
     }
   }
+  if (n1.step === 4 && isTargetPower(n1.v, rt)) {
+    completeChallenge(4, t('n1.c5.ok', { v: fmt(n1.v, 1), i: fmt(current(n1.v, rt), 2) }));
+  }
 }
 
-function answerQuiz(opt, button) {
-  if (opt === LEVEL1.quizAnswer) {
-    completeChallenge(2, t('n1.c3.ok'));
+function answerQuiz(k, opt, button) {
+  const correct = k === 2 ? LEVEL1.quizAnswer : LEVEL1.quiz2Answer;
+  const prefix = k === 2 ? 'n1.c3' : 'n1.c4';
+  if (opt === correct) {
+    completeChallenge(k, t(`${prefix}.ok`));
     return;
   }
   n1.mistakes += 1;
+  n1.failedQuizzes.add(k);
   button.disabled = true;
   button.classList.add('wrong');
   button.textContent = `✘ ${button.textContent}`;
-  setChallengeMsg(t(`n1.c3.no.${opt}`), 'bad');
+  setChallengeMsg(t(`${prefix}.no.${opt}`), 'bad');
 }
 
 /* ═══════════════════════ Nivel 2 · ¡Salva el LED! ═══════════════════════ */
@@ -969,6 +1071,31 @@ $('#n3-skip').addEventListener('click', () => {
   nextQuestion();
 });
 
+// ── Calculadora del nivel 3 ──
+function updateCalc() {
+  const value = evaluateExpression($('#n3-calc-in').value);
+  const out = $('#n3-calc-out');
+  if (!$('#n3-calc-in').value.trim()) out.textContent = '=';
+  else out.textContent = Number.isNaN(value) ? t('n3.calcErr') : `= ${fmt(value, 4)}`;
+  return value;
+}
+$('#n3-calc-in').addEventListener('input', updateCalc);
+$('#n3-calc-in').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); $('#n3-calc-use').click(); }
+});
+document.querySelectorAll('#n3-calc-box [data-key]').forEach(b => b.addEventListener('click', () => {
+  const input = $('#n3-calc-in');
+  input.value = b.dataset.key === 'C' ? '' : input.value + b.dataset.key;
+  updateCalc();
+  input.focus();
+}));
+$('#n3-calc-use').addEventListener('click', () => {
+  const value = updateCalc();
+  if (Number.isNaN(value)) return;
+  $('#n3-input').value = fmt(value, 4);
+  $('#n3-input').focus();
+});
+
 function solutionText(q) {
   const parts = [];
   const si = q.si;
@@ -1067,7 +1194,7 @@ $('#lang-btn').addEventListener('click', () => {
   // Volvemos a pintar la pantalla actual sin perder el estado del nivel 1 y 2
   renderChrome();
   if (currentScreen === 'mapa') renderMap();
-  if (currentScreen === 'n1') { updateLevel1(); renderChallenges(); }
+  if (currentScreen === 'n1') { renderModes(); updateLevel1(); renderChallenges(); }
   if (currentScreen === 'n2') renderRound();
   if (currentScreen === 'n3' && n3.running && n3.q) {
     $('#n3-find').textContent = t('n3.find', { what: t(`n3.what.${n3.q.unknown}`) });

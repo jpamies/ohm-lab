@@ -111,3 +111,62 @@ export function shuffle(list, rand = Math.random) {
   }
   return a;
 }
+
+/**
+ * Calculadora segura: evalúa expresiones con números, + − × ÷, paréntesis y coma decimal.
+ * No usa eval(). Devuelve NaN si la expresión no es válida.
+ */
+export function evaluateExpression(text) {
+  const src = String(text ?? '')
+    .replace(/[×xX·*]/g, '*')
+    .replace(/[÷:/]/g, '/')
+    .replace(/[−–]/g, '-')
+    .replace(/,/g, '.')
+    .replace(/\s+/g, '');
+  if (!src || src.length > 80) return Number.NaN;
+  let pos = 0;
+  const peek = () => src[pos];
+  function number() {
+    const m = src.slice(pos).match(/^(\d+\.?\d*|\.\d+)/);
+    if (!m) throw new Error('número');
+    pos += m[0].length;
+    return Number(m[0]);
+  }
+  function factor() {
+    if (peek() === '-') { pos++; return -factor(); }
+    if (peek() === '+') { pos++; return factor(); }
+    if (peek() === '(') {
+      pos++;
+      const v = expr();
+      if (peek() !== ')') throw new Error('paréntesis');
+      pos++;
+      return v;
+    }
+    return number();
+  }
+  function term() {
+    let v = factor();
+    while (peek() === '*' || peek() === '/') {
+      const op = src[pos++];
+      const w = factor();
+      v = op === '*' ? v * w : v / w;
+    }
+    return v;
+  }
+  function expr() {
+    let v = term();
+    while (peek() === '+' || peek() === '-') {
+      const op = src[pos++];
+      const w = term();
+      v = op === '+' ? v + w : v - w;
+    }
+    return v;
+  }
+  try {
+    const v = expr();
+    if (pos !== src.length || !Number.isFinite(v)) return Number.NaN;
+    return v;
+  } catch {
+    return Number.NaN;
+  }
+}

@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { seededRandom, nearlyEqual } from '../js/physics.js';
+import { seededRandom, nearlyEqual, current } from '../js/physics.js';
 import {
-  LEVEL1, LEVEL2_ROUNDS, LED, isTargetCurrent, checkHalfCurrent, canHalveFrom, scoreLevel1,
+  LEVEL1, LEVEL2_ROUNDS, LED, isTargetCurrent, totalResistance, power, isTargetPower, checkHalfCurrent, canHalveFrom, scoreLevel1,
   evaluateLed, validOptions, optimalResistance, validateRound, prepareLevel2, scoreLevel2,
   generateQuestion, isConsistent, starsLevel3, answerPoints, isUnlocked, allDone
 } from '../js/levels.js';
@@ -33,9 +33,33 @@ test('Nivel 1 · mitad de corriente sin tocar la tensión', () => {
 test('Nivel 1 · la respuesta de opción múltiple es «se duplica»', () => {
   assert.equal(LEVEL1.quizAnswer, 'double');
   assert.ok(LEVEL1.quizOptions.includes('double'));
-  assert.deepEqual(scoreLevel1(0), { hits: 3, total: 3, points: 300, stars: 3 });
+  assert.deepEqual(scoreLevel1(0), { hits: 5, total: 5, points: 500, stars: 3 });
   assert.equal(scoreLevel1(1).stars, 2);
-  assert.equal(scoreLevel1(3).stars, 1);
+  assert.equal(scoreLevel1(3, 2).stars, 1);
+  assert.equal(scoreLevel1(3, 2).hits, 3);
+});
+
+test('Nivel 1 · serie, paralelo y potencia', () => {
+  assert.equal(totalResistance(30, 'single'), 30);
+  assert.equal(totalResistance(30, 'series'), 60);
+  assert.equal(totalResistance(30, 'parallel'), 15);
+  // En paralelo circula más corriente que en serie (misma tensión)
+  assert.ok(current(9, totalResistance(30, 'parallel')) > current(9, totalResistance(30, 'series')));
+  assert.equal(LEVEL1.quiz2Answer, 'parallel');
+  assert.ok(nearlyEqual(power(9, 0.3), 2.7));
+  assert.ok(isTargetPower(6, 6));
+  assert.ok(isTargetPower(12, 24));
+  assert.ok(!isTargetPower(9, 30));
+  // 6 W se puede conseguir con los deslizadores en cualquiera de los montajes
+  for (const mode of LEVEL1.modes) {
+    let found = false;
+    for (let v = LEVEL1.voltage.min; v <= LEVEL1.voltage.max; v += LEVEL1.voltage.step) {
+      for (let r = LEVEL1.resistance.min; r <= LEVEL1.resistance.max; r += LEVEL1.resistance.step) {
+        if (isTargetPower(v, totalResistance(r, mode))) found = true;
+      }
+    }
+    assert.ok(found, mode);
+  }
 });
 
 test('Nivel 2 · cada ronda tiene exactamente una respuesta óptima', () => {
@@ -106,13 +130,24 @@ test('Nivel 3 · 2000 preguntas aleatorias coherentes con V = I · R', () => {
   assert.ok(kinds.size >= 6);
 });
 
+test('Nivel 3 · números redondos (poco cálculo mental)', () => {
+  const rand = seededRandom(7);
+  for (let k = 0; k < 2000; k++) {
+    const q = generateQuestion(rand);
+    for (const g of Object.values(q.given)) {
+      assert.ok(Number.isInteger(g.value * 2), `dato poco redondo: ${g.value} ${g.unit}`);
+    }
+    assert.ok(Number.isInteger(q.answer * 2), `respuesta poco redonda: ${q.answer} ${q.unit}`);
+  }
+});
+
 test('Nivel 3 · puntuación y estrellas', () => {
   assert.equal(answerPoints(1), 10);
   assert.equal(answerPoints(3), 15);
-  assert.equal(starsLevel3(0), 0);
-  assert.equal(starsLevel3(2), 1);
-  assert.equal(starsLevel3(4), 2);
-  assert.equal(starsLevel3(6), 3);
+  assert.equal(starsLevel3(2), 0);
+  assert.equal(starsLevel3(3), 1);
+  assert.equal(starsLevel3(6), 2);
+  assert.equal(starsLevel3(9), 3);
 });
 
 test('Desbloqueo de niveles', () => {

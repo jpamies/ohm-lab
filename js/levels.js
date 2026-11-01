@@ -9,12 +9,35 @@ export const LEVEL1 = {
   targetCurrent: 0.5, // reto 1: «consigue exactamente 0,5 A»
   // Reto 3: opción múltiple. La correcta es «double».
   quizOptions: ['double', 'half', 'same', 'quadruple'],
-  quizAnswer: 'double'
+  quizAnswer: 'double',
+  // Reto 4: serie o paralelo. La correcta es «parallel».
+  modes: ['single', 'series', 'parallel'],
+  quiz2Options: ['series', 'parallel', 'same'],
+  quiz2Answer: 'parallel',
+  targetPower: 6, // reto 5: «consigue exactamente 6 W»
+  challenges: 5
 };
+
+/** Resistencia total del montaje con dos resistencias iguales de valor r. */
+export function totalResistance(r, mode = 'single') {
+  if (mode === 'series') return 2 * r;      // Rt = R1 + R2
+  if (mode === 'parallel') return r / 2;    // 1/Rt = 1/R1 + 1/R2
+  return r;
+}
+
+/** Potencia eléctrica P = V · I (W). */
+export function power(v, i) {
+  return v * i;
+}
 
 /** Reto 1: ¿la corriente es exactamente la objetivo? */
 export function isTargetCurrent(v, r, target = LEVEL1.targetCurrent) {
   return nearlyEqual(current(v, r), target);
+}
+
+/** Reto 5: ¿la potencia es exactamente la objetivo? (r = resistencia total) */
+export function isTargetPower(v, r, target = LEVEL1.targetPower) {
+  return nearlyEqual(power(v, current(v, r)), target);
 }
 
 /**
@@ -32,12 +55,15 @@ export function canHalveFrom(r0) {
   return r0 * 2 <= LEVEL1.resistance.max;
 }
 
-/** Puntuación del nivel 1 según los errores en la pregunta de opción múltiple. */
-export function scoreLevel1(quizMistakes) {
-  const points = 300 - Math.min(quizMistakes, 3) * 25;
-  const stars = quizMistakes === 0 ? 3 : quizMistakes === 1 ? 2 : 1;
-  const hits = quizMistakes === 0 ? 3 : 2;
-  return { hits, total: 3, points, stars };
+/**
+ * Puntuación del nivel 1.
+ * mistakes: errores totales en las preguntas de opción múltiple; failedQuizzes: preguntas con algún error.
+ */
+export function scoreLevel1(mistakes, failedQuizzes = Math.min(mistakes, 1)) {
+  const total = LEVEL1.challenges;
+  const points = total * 100 - Math.min(mistakes, 4) * 25;
+  const stars = mistakes === 0 ? 3 : mistakes === 1 ? 2 : 1;
+  return { hits: total - failedQuizzes, total, points, stars };
 }
 
 /* ───────────────────────── Nivel 2 · ¡Salva el LED! ───────────────────────── */
@@ -116,7 +142,7 @@ export function prepareLevel2(rand = Math.random) {
 
 /* ───────────────────────── Nivel 3 · Contrarreloj ───────────────────────── */
 
-export const LEVEL3 = { seconds: 60, tolerance: 0.02, starThresholds: [2, 4, 6] };
+export const LEVEL3 = { seconds: 120, tolerance: 0.02, starThresholds: [3, 6, 9] };
 
 const pick = (list, rand) => list[Math.floor(rand() * list.length)];
 const isNice = (x, decimals = 1) => nearlyEqual(Math.round(x * 10 ** decimals) / 10 ** decimals, x);
@@ -127,52 +153,52 @@ const isNice = (x, decimals = 1) => nearlyEqual(Math.round(x * 10 ** decimals) /
  * `si` guarda los valores en unidades básicas (V, A, Ω) para la explicación.
  */
 const TEMPLATES = [
-  // I en A con R en Ω
+  // I en A con R en Ω (resultado entero o con un decimal sencillo)
   rand => {
-    const r = pick([2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 40, 50, 60, 100], rand);
-    const i = pick([0.1, 0.2, 0.25, 0.3, 0.5, 0.75, 1, 1.5, 2, 3], rand);
+    const r = pick([2, 3, 4, 5, 6, 10, 20], rand);
+    const i = pick([0.5, 1, 2, 3], rand);
     const v = i * r;
-    if (v > 24 || v < 1 || !isNice(v)) return null;
+    if (v > 24 || v < 1 || !Number.isInteger(v)) return null;
     return { unknown: 'I', unit: 'A', answer: i, given: { V: { value: v, unit: 'V' }, R: { value: r, unit: 'Ω' } }, si: { V: v, I: i, R: r } };
   },
   // V en V con I en A
   rand => {
-    const r = pick([2, 4, 5, 8, 10, 12, 20, 25, 40, 50, 100], rand);
-    const i = pick([0.1, 0.2, 0.25, 0.5, 1, 1.5, 2], rand);
+    const r = pick([2, 3, 4, 5, 10, 20, 50, 100], rand);
+    const i = pick([0.5, 1, 2, 3], rand);
     const v = i * r;
-    if (v > 230 || v < 1 || !isNice(v)) return null;
+    if (v > 230 || v < 1 || !Number.isInteger(v)) return null;
     return { unknown: 'V', unit: 'V', answer: v, given: { I: { value: i, unit: 'A' }, R: { value: r, unit: 'Ω' } }, si: { V: v, I: i, R: r } };
   },
   // R en Ω con I en A
   rand => {
-    const r = pick([2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 100], rand);
-    const i = pick([0.1, 0.2, 0.25, 0.5, 1, 2], rand);
+    const r = pick([2, 3, 4, 5, 6, 10, 12, 20], rand);
+    const i = pick([0.5, 1, 2, 3], rand);
     const v = i * r;
-    if (v > 24 || v < 1 || !isNice(v)) return null;
+    if (v > 24 || v < 1 || !Number.isInteger(v)) return null;
     return { unknown: 'R', unit: 'Ω', answer: r, given: { V: { value: v, unit: 'V' }, I: { value: i, unit: 'A' } }, si: { V: v, I: i, R: r } };
   },
-  // Conversión: I en mA con R en kΩ
+  // Conversión: I en mA con R en kΩ (V en V / R en kΩ = I en mA)
   rand => {
-    const rk = pick([1, 1.5, 2, 2.2, 3, 4, 4.7, 5, 10], rand);
-    const imA = pick([0.5, 1, 2, 2.5, 3, 4, 5, 6, 10], rand);
+    const rk = pick([1, 2, 3, 4, 5, 10], rand);
+    const imA = pick([1, 2, 3, 4, 5, 10], rand);
     const v = imA * rk;
-    if (v > 24 || v < 1 || !isNice(v)) return null;
+    if (v > 24 || v < 2) return null;
     return { unknown: 'I', unit: 'mA', answer: imA, given: { V: { value: v, unit: 'V' }, R: { value: rk, unit: 'kΩ' } }, si: { V: v, I: imA / 1000, R: rk * 1000 } };
   },
   // Conversión: R en Ω con I en mA
   rand => {
-    const r = pick([100, 150, 200, 220, 250, 300, 400, 450, 500, 600, 1000], rand);
-    const imA = pick([5, 10, 15, 20, 25, 30, 50], rand);
+    const r = pick([100, 200, 300, 400, 500, 600], rand);
+    const imA = pick([10, 20, 30, 50], rand);
     const v = (imA / 1000) * r;
-    if (v > 24 || v < 1 || !isNice(v)) return null;
+    if (v > 24 || v < 1 || !Number.isInteger(Math.round(v * 1e6) / 1e6)) return null;
     return { unknown: 'R', unit: 'Ω', answer: r, given: { V: { value: v, unit: 'V' }, I: { value: imA, unit: 'mA' } }, si: { V: v, I: imA / 1000, R: r } };
   },
   // Conversión: V con I en mA y R en kΩ
   rand => {
-    const rk = pick([1, 2, 2.2, 3.3, 4.7, 5, 10], rand);
-    const imA = pick([0.5, 1, 1.5, 2, 3, 5], rand);
+    const rk = pick([1, 2, 3, 5, 10], rand);
+    const imA = pick([1, 2, 3, 5], rand);
     const v = imA * rk;
-    if (v > 24 || v < 0.5 || !isNice(v, 2)) return null;
+    if (v > 24 || v < 1) return null;
     return { unknown: 'V', unit: 'V', answer: v, given: { I: { value: imA, unit: 'mA' }, R: { value: rk, unit: 'kΩ' } }, si: { V: v, I: imA / 1000, R: rk * 1000 } };
   }
 ];

@@ -190,7 +190,7 @@ function drawQr(doc, qrFactory, text, x, y, size) {
 
 /**
  * Genera el diploma (A4 horizontal). Devuelve el documento jsPDF.
- * opts: { jsPDF, qrcode, data, code, results:[{hits,total,points,stars}], texts, url, dateText }
+ * opts: { jsPDF, qrcode, data, code, results:[{hits,total,points,stars}], texts, url, shortUrl, dateText }
  */
 export function buildDiplomaPdf(opts) {
   const { jsPDF, qrcode, data, code, results, texts, url, dateText } = opts;
@@ -262,7 +262,7 @@ export function buildDiplomaPdf(opts) {
   doc.setTextColor(...C.ink);
   const who = [texts.groupLabel + ' ' + data.group, data.school ? data.school : null].filter(Boolean).join('  ·  ');
   doc.text(who, W / 2, 80, { align: 'center', maxWidth: W - 60 });
-  doc.text(texts.reason, W / 2, 89, { align: 'center', maxWidth: W - 70 });
+  doc.text(texts.reason, W / 2, 88, { align: 'center', maxWidth: W - 70 });
 
   // Tabla de resultados
   const tx = 30;
@@ -309,7 +309,7 @@ export function buildDiplomaPdf(opts) {
   // QR y código
   const qrSize = 46;
   const qx = W - 30 - qrSize;
-  const qy = 98;
+  const qy = 97;
   drawQr(doc, qrcode, url, qx, qy, qrSize);
   doc.setFontSize(9);
   doc.setTextColor(...C.grey);
@@ -318,6 +318,15 @@ export function buildDiplomaPdf(opts) {
   doc.setFontSize(13);
   doc.setTextColor(...C.ink);
   doc.text(code, qx + qrSize / 2, qy + qrSize + 13, { align: 'center' });
+  if (opts.shortUrl) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...C.grey);
+    doc.text(`${texts.verifyAt}:`, qx + qrSize / 2, qy + qrSize + 19, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...C.ink);
+    doc.text(opts.shortUrl, qx + qrSize / 2, qy + qrSize + 23.5, { align: 'center', maxWidth: 80 });
+  }
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...C.grey);

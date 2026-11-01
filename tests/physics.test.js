@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   current, voltage, resistance, ledCurrent, minLedResistance, withinTolerance,
-  parseUserNumber, formatNumber, formatOhms, isE12, nearlyEqual
+  parseUserNumber, formatNumber, formatOhms, isE12, nearlyEqual, evaluateExpression
 } from '../js/physics.js';
 
 test('Ley de Ohm: I = V / R, V = I · R, R = V / I', () => {
@@ -57,4 +57,16 @@ test('Serie E12', () => {
     assert.ok(isE12(r), `${r} debería ser E12`);
   }
   for (const r of [200, 450, 500, 250]) assert.ok(!isE12(r), `${r} no es E12`);
+});
+
+test('Calculadora segura', () => {
+  assert.equal(evaluateExpression('9 / 450'), 0.02);
+  assert.equal(evaluateExpression('(12 − 2) / 0,02'), 500);
+  assert.equal(evaluateExpression('2 × 3 + 1'), 7);
+  assert.equal(evaluateExpression('0,5·20'), 10);
+  assert.equal(evaluateExpression('-3+5'), 2);
+  assert.ok(Number.isNaN(evaluateExpression('5/0')));
+  assert.ok(Number.isNaN(evaluateExpression('alert(1)')));
+  assert.ok(Number.isNaN(evaluateExpression('2+')));
+  assert.ok(Number.isNaN(evaluateExpression('')));
 });

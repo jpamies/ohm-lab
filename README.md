@@ -11,11 +11,11 @@ Diseño didáctico: Jordi Pàmies · Desarrollado con asistencia de IA (Claude, 
 
 | Nivel | Nombre | Qué practica |
 |---|---|---|
-| 1 · Explorar | **El agua y la corriente** | Deslizadores de tensión (1–12 V) y resistencia (1–100 Ω), circuito animado y su analogía hidráulica (depósito, tubería estrecha, caudal). Tres retos: conseguir 0,5 A, reducir la corriente a la mitad sin tocar la tensión, y una pregunta de opción múltiple. |
+| 1 · Explorar | **El agua y la corriente** | Deslizadores de tensión (1–12 V) y resistencia (1–100 Ω), circuito animado y su analogía hidráulica (depósito, tubería estrecha, caudal). Cinco retos: conseguir 0,5 A, reducir la corriente a la mitad sin tocar la tensión, una pregunta sobre proporcionalidad, comparar montajes **en serie y en paralelo** (se desbloquean tras el reto 3) y conseguir una **potencia** de 6 W (P = V · I). |
 | 2 · Aplicar | **¡Salva el LED!** | 5 rondas: pila de 5, 9 o 12 V y un LED (20 mA, 2 V). Hay que elegir la resistencia E12 **más pequeña** que lo protege. Si se quema, chispa y pista; si es demasiado grande, aviso de que se ve flojo. |
-| 3 · Consolidar | **Contrarreloj** | 60 s de preguntas aleatorias (falta V, I o R), con conversiones de mA y kΩ, tolerancia ±2 %, racha, de 1 a 3 estrellas y repaso de fallos con la solución. |
+| 3 · Consolidar | **Contrarreloj** | 2 minutos de preguntas aleatorias con números redondos (falta V, I o R), con conversiones de mA y kΩ, **calculadora integrada**, tolerancia ±2 %, racha, de 1 a 3 estrellas (3, 6 y 9 aciertos) y repaso de fallos con la solución. |
 
-Recompensas: un **badge PNG** por nivel (Explorador/a de la corriente, Salvador/a de LEDs, Maestro/a de Ohm) y un **diploma PDF** (A4 horizontal) con resultados, código de verificación y QR.
+Recompensas: un **badge PNG** por nivel (Explorador/a de la corriente, Salvador/a de LEDs, Maestro/a de Ohm) y un **diploma PDF** (A4 horizontal) con resultados, código de verificación, QR y la dirección corta de la página de verificación.
 
 Siempre visibles: botón **Ayuda** con el triángulo de Ohm, indicador de progreso y cambio de idioma.
 
