@@ -2,8 +2,8 @@
 
 Web-juego para practicar la **Ley de Ohm (V = I · R)** en **Tecnologia i Digitalització, 3.º ESO** (Cataluña, Decret 175/2022). Estilo de mundo de bloques pixelados, en **castellano y catalán**.
 
-👉 **Juega:** https://jpamies.github.io/ohm-lab/
-👉 **Verificar un diploma:** https://jpamies.github.io/ohm-lab/verificar.html
+👉 **Juega:** https://jpamies.com/ohm-lab/ (también https://jpamies.github.io/ohm-lab/, que redirige)
+👉 **Verificar un diploma:** https://jpamies.com/ohm-lab/verificar.html
 
 Diseño didáctico: Jordi Pàmies · Desarrollado con asistencia de IA (Claude, Anthropic) · 2026.
 
@@ -33,7 +33,7 @@ El workflow `.github/workflows/pages.yml` ejecuta los tests en cada push a `main
 
 1. En el repositorio: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 2. Haz un push a `main` (o ve a **Actions → Tests y despliegue en GitHub Pages → Run workflow**).
-3. Cuando acabe, la web estará en `https://jpamies.github.io/ohm-lab/`.
+3. Cuando acabe, la web estará en `https://jpamies.com/ohm-lab/` (el dominio propio de la cuenta; `jpamies.github.io/ohm-lab/` redirige allí).
 
 Si los tests fallan, no se despliega.
 
