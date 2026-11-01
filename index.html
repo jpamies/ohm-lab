@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ohm Lab · Ley de Ohm</title>
+  <meta name="description" content="Ohm Lab: practica la Ley de Ohm (V = I · R) jugando. Tecnologia i Digitalització, 3.º ESO.">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i18n="app.title">Ohm Lab</a>
+
+  <header class="topbar">
+    <a class="logo" href="#" id="logo" aria-label="Ohm Lab">
+      <span class="logo-block" aria-hidden="true">Ω</span>
+      <span class="logo-text">OHM LAB</span>
+    </a>
+    <div class="progress" id="progress" role="img" aria-label="">
+      <span class="pblock" data-level="n1">1</span>
+      <span class="pblock" data-level="n2">2</span>
+      <span class="pblock" data-level="n3">3</span>
+    </div>
+    <div class="top-actions">
+      <button type="button" class="btn btn-small btn-stone" id="lang-btn" data-i18n-aria="lang.switchLabel">Català</button>
+      <button type="button" class="btn btn-small btn-gold" id="help-btn" aria-haspopup="dialog">
+        <span aria-hidden="true">?</span> <span data-i18n="help.button">Ayuda</span>
+      </button>
+    </div>
+  </header>
+
+  <p class="storage-warning" id="storage-warning" hidden data-i18n="storage.warning"></p>
+
+  <main id="main" tabindex="-1">
+
+    <!-- ───────── Inicio ───────── -->
+    <section class="screen" id="screen-start" hidden>
+      <div class="hero">
+        <h1 class="pixel title">OHM<br>LAB</h1>
+        <p class="tagline" data-i18n="app.tagline"></p>
+        <div class="formula-blocks" aria-hidden="true">
+          <span class="block b-v">V</span><span class="op">=</span><span class="block b-i">I</span><span class="op">·</span><span class="block b-r">R</span>
+        </div>
+        <p class="blink pixel" aria-hidden="true" data-i18n="start.press"></p>
+      </div>
+      <form class="panel" id="start-form" novalidate>
+        <h2 class="pixel h-panel" data-i18n="start.title"></h2>
+        <div class="field">
+          <label for="f-name" data-i18n="start.name"></label>
+          <input id="f-name" name="name" type="text" autocomplete="off" maxlength="60" required data-i18n-ph="start.namePh" aria-describedby="e-name">
+          <p class="field-error" id="e-name" aria-live="polite"></p>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f-group" data-i18n="start.group"></label>
+            <input id="f-group" name="group" type="text" autocomplete="off" maxlength="12" required data-i18n-ph="start.groupPh" aria-describedby="e-group">
+            <p class="field-error" id="e-group" aria-live="polite"></p>
+          </div>
+          <div class="field">
+            <label for="f-school" data-i18n="start.school"></label>
+            <input id="f-school" name="school" type="text" autocomplete="off" maxlength="60" data-i18n-ph="start.schoolPh" aria-describedby="e-school">
+            <p class="field-error" id="e-school" aria-live="polite"></p>
+          </div>
+        </div>
+        <button class="btn btn-grass btn-big" type="submit" data-i18n="start.go"></button>
+        <p class="privacy" data-i18n="privacy"></p>
+      </form>
+    </section>
+
+    <!-- ───────── Mapa ───────── -->
+    <section class="screen" id="screen-map" hidden>
+      <div class="panel panel-hello">
+        <h1 class="pixel h-hello" id="map-hello"></h1>
+        <p id="map-group" class="muted"></p>
+        <p data-i18n="map.intro"></p>
+      </div>
+      <ol class="world" id="world"></ol>
+
+      <h2 class="pixel h-section" data-i18n="map.rewards"></h2>
+      <div class="rewards" id="rewards"></div>
+
+      <div class="panel diploma-panel" id="diploma-panel">
+        <h3 class="pixel h-panel" data-i18n="map.diploma"></h3>
+        <p id="diploma-text"></p>
+        <p id="diploma-code" class="code-line"></p>
+        <button type="button" class="btn btn-gold btn-big" id="diploma-btn" data-i18n="map.diplomaBtn"></button>
+      </div>
+
+      <div class="map-actions">
+        <button type="button" class="btn btn-stone" id="edit-btn" data-i18n="map.edit"></button>
+        <button type="button" class="btn btn-redstone" id="reset-btn" data-i18n="map.reset"></button>
+      </div>
+      <p class="privacy" data-i18n="privacy"></p>
+      <p class="sr-status" id="map-status" aria-live="polite"></p>
+    </section>
+
+    <!-- ───────── Nivel 1 ───────── -->
+    <section class="screen" id="screen-n1" hidden>
+      <div class="level-head">
+        <button type="button" class="btn btn-small btn-stone back" data-i18n="map.back"></button>
+        <h1 class="pixel h-level"><span class="lvl-tag">1</span> <span data-i18n="level.n1.name"></span></h1>
+      </div>
+      <p class="panel intro" data-i18n="n1.intro"></p>
+
+      <div class="n1-grid">
+        <figure class="panel scene">
+          <figcaption class="pixel h-fig" data-i18n="n1.circuit"></figcaption>
+          <svg id="n1-circuit" viewBox="0 0 320 220" role="img"></svg>
+        </figure>
+        <figure class="panel scene">
+          <figcaption class="pixel h-fig" data-i18n="n1.water"></figcaption>
+          <svg id="n1-water" viewBox="0 0 320 220" role="img"></svg>
+        </figure>
+      </div>
+
+      <div class="panel controls">
+        <div class="slider">
+          <label for="n1-v"><span data-i18n="n1.voltage"></span> <output id="n1-v-out" for="n1-v"></output></label>
+          <input type="range" id="n1-v">
+        </div>
+        <div class="slider">
+          <label for="n1-r"><span data-i18n="n1.resistance"></span> <output id="n1-r-out" for="n1-r"></output></label>
+          <input type="range" id="n1-r">
+        </div>
+        <p class="calc" id="n1-calc" aria-live="polite"></p>
+      </div>
+
+      <h2 class="pixel h-section" data-i18n="n1.challenges"></h2>
+      <ol class="challenges" id="n1-challenges"></ol>
+      <div class="level-done" id="n1-done" hidden></div>
+    </section>
+
+    <!-- ───────── Nivel 2 ───────── -->
+    <section class="screen" id="screen-n2" hidden>
+      <div class="level-head">
+        <button type="button" class="btn btn-small btn-stone back" data-i18n="map.back"></button>
+        <h1 class="pixel h-level"><span class="lvl-tag">2</span> <span data-i18n="level.n2.name"></span></h1>
+      </div>
+      <p class="panel intro" data-i18n="n2.intro"></p>
+      <div class="n2-game panel" id="n2-game">
+        <div class="n2-top">
+          <p class="pixel round-label" id="n2-round"></p>
+          <div class="hearts" id="n2-dots" aria-hidden="true"></div>
+        </div>
+        <svg id="n2-circuit" viewBox="0 0 340 200" role="img"></svg>
+        <p class="spec"><strong id="n2-battery"></strong> · <span data-i18n="n2.ledSpec"></span></p>
+        <p id="n2-choose-label" data-i18n="n2.choose"></p>
+        <div class="options" id="n2-options" role="group" aria-labelledby="n2-choose-label"></div>
+        <div class="feedback" id="n2-feedback" aria-live="polite"></div>
+        <button type="button" class="btn btn-grass btn-big" id="n2-next" hidden></button>
+      </div>
+      <div class="level-done" id="n2-done" hidden></div>
+    </section>
+
+    <!-- ───────── Nivel 3 ───────── -->
+    <section class="screen" id="screen-n3" hidden>
+      <div class="level-head">
+        <button type="button" class="btn btn-small btn-stone back" data-i18n="map.back"></button>
+        <h1 class="pixel h-level"><span class="lvl-tag">3</span> <span data-i18n="level.n3.name"></span></h1>
+      </div>
+      <p class="panel intro" data-i18n="n3.intro"></p>
+      <div class="panel n3-ready" id="n3-ready">
+        <button type="button" class="btn btn-grass btn-big" id="n3-start" data-i18n="n3.start"></button>
+      </div>
+      <div class="panel n3-game" id="n3-game" hidden>
+        <div class="hud">
+          <div class="hud-item"><span data-i18n="n3.time"></span><strong class="pixel" id="n3-time">60</strong></div>
+          <div class="hud-item"><span data-i18n="n3.score"></span><strong class="pixel" id="n3-score">0</strong></div>
+          <div class="hud-item"><span data-i18n="n3.streak"></span><strong class="pixel" id="n3-streak">0</strong></div>
+        </div>
+        <div class="timebar" aria-hidden="true"><span id="n3-bar"></span></div>
+        <p class="pixel n3-find" id="n3-find"></p>
+        <div class="given" id="n3-given"></div>
+        <form id="n3-form" class="n3-form" autocomplete="off">
+          <label for="n3-input" id="n3-label"></label>
+          <div class="answer-row">
+            <input id="n3-input" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done">
+            <span class="unit pixel" id="n3-unit"></span>
+          </div>
+          <div class="n3-buttons">
+            <button class="btn btn-grass" type="submit" data-i18n="n3.submit"></button>
+            <button class="btn btn-stone" type="button" id="n3-skip" data-i18n="n3.skip"></button>
+          </div>
+        </form>
+        <p class="feedback" id="n3-feedback" aria-live="polite"></p>
+      </div>
+      <div class="panel n3-summary" id="n3-summary" hidden></div>
+    </section>
+  </main>
+
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <h2 class="pixel h-panel" id="help-title" data-i18n="help.title"></h2>
+    <p data-i18n="help.intro"></p>
+    <div class="triangle-wrap">
+      <svg id="ohm-triangle" viewBox="0 0 240 210" aria-hidden="true"></svg>
+      <p class="triangle-result pixel" id="triangle-result" aria-live="polite"></p>
+    </div>
+    <div class="tri-buttons" role="group">
+      <button type="button" class="btn btn-small btn-v" data-cover="V">V</button>
+      <button type="button" class="btn btn-small btn-i" data-cover="I">I</button>
+      <button type="button" class="btn btn-small btn-r" data-cover="R">R</button>
+    </div>
+    <p class="muted small" data-i18n="help.tip"></p>
+    <ul class="help-list">
+      <li data-i18n="help.V"></li>
+      <li data-i18n="help.I"></li>
+      <li data-i18n="help.R"></li>
+      <li data-i18n="help.units"></li>
+      <li data-i18n="help.led"></li>
+    </ul>
+    <form method="dialog"><button class="btn btn-grass" data-i18n="help.close"></button></form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <canvas id="badge-canvas" width="600" height="600" hidden></canvas>
+
+  <footer class="footer">
+    <div class="ground" aria-hidden="true"></div>
+    <p data-i18n="footer"></p>
+  </footer>
+
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

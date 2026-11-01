@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verificar diploma · Ohm Lab</title>
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="./" aria-label="Ohm Lab">
+      <span class="logo-block" aria-hidden="true">Ω</span>
+      <span class="logo-text">OHM LAB</span>
+    </a>
+    <div class="top-actions" style="margin-left:auto">
+      <button type="button" class="btn btn-small btn-stone" id="lang-btn" data-i18n-aria="lang.switchLabel">Català</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="level-head">
+      <h1 class="pixel h-level"><span class="lvl-tag">✓</span> <span data-i18n="verify.title"></span></h1>
+    </div>
+    <p class="panel intro" data-i18n="verify.intro"></p>
+
+    <div class="panel" id="result-panel" hidden>
+      <p class="verify-result" id="verify-result" role="status"></p>
+      <p id="verify-help"></p>
+      <h2 class="pixel h-panel" data-i18n="verify.data"></h2>
+      <table class="data-table"><tbody id="verify-data"></tbody></table>
+    </div>
+
+    <form class="panel" id="link-form">
+      <div class="field">
+        <label for="v-link" data-i18n="verify.paste"></label>
+        <input type="text" id="v-link" autocomplete="off" data-i18n-ph="verify.pastePh">
+      </div>
+      <p class="field-error" id="link-error" aria-live="polite"></p>
+      <button type="submit" class="btn btn-gold" data-i18n="verify.load"></button>
+    </form>
+
+    <form class="panel" id="manual-form">
+      <h2 class="pixel h-panel" data-i18n="verify.manual"></h2>
+      <div class="field"><label for="v-name" data-i18n="verify.name"></label><input type="text" id="v-name" autocomplete="off"></div>
+      <div class="field-row">
+        <div class="field"><label for="v-group" data-i18n="verify.group"></label><input type="text" id="v-group" autocomplete="off"></div>
+        <div class="field"><label for="v-school" data-i18n="verify.school"></label><input type="text" id="v-school" autocomplete="off"></div>
+      </div>
+      <div class="field"><label for="v-date" data-i18n="verify.date"></label><input type="text" id="v-date" autocomplete="off" placeholder="2026-11-05T10:23:45Z"></div>
+      <div class="field-row">
+        <div class="field"><label for="v-p1" data-i18n="verify.p1"></label><input type="text" inputmode="numeric" id="v-p1" autocomplete="off"></div>
+        <div class="field"><label for="v-p2" data-i18n="verify.p2"></label><input type="text" inputmode="numeric" id="v-p2" autocomplete="off"></div>
+        <div class="field"><label for="v-p3" data-i18n="verify.p3"></label><input type="text" inputmode="numeric" id="v-p3" autocomplete="off"></div>
+      </div>
+      <div class="field"><label for="v-code" data-i18n="verify.code"></label><input type="text" id="v-code" autocomplete="off" placeholder="OHM-XXXX-XXXX-XXXX"></div>
+      <button type="submit" class="btn btn-grass btn-big" data-i18n="verify.check"></button>
+    </form>
+
+    <p style="text-align:center"><a class="btn btn-stone" href="./" data-i18n="verify.back"></a></p>
+  </main>
+
+  <footer class="footer">
+    <div class="ground" aria-hidden="true"></div>
+    <p data-i18n="footer"></p>
+  </footer>
+  <script type="module" src="js/verify.js"></script>
+</body>
+</html>
