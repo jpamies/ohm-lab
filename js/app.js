@@ -487,6 +487,8 @@ function setMode(mode) {
 
 // ── SVG del circuito ──
 const CIRCUIT_LOOP = [[40, 40], [280, 40], [280, 180], [40, 180]];
+// En paralelo, la mitad de los electrones baja por la rama de la resistencia de abajo
+const BRANCH_LOOP = [[40, 40], [104, 40], [104, 104], [216, 104], [216, 40], [280, 40], [280, 180], [40, 180]];
 let circuitDots = [];
 let waterDots = [];
 let wheelAngle = 0;
@@ -532,7 +534,6 @@ function buildCircuitSvg() {
       <path d="M40 40 H280 V180 H40 Z"/>
     </g>
     ${extraWires}
-    <g id="c-dots"></g>
     <!-- Pila -->
     <g transform="translate(16 82)" shape-rendering="crispEdges">
       <rect width="48" height="56" fill="#3b3b3b" stroke="#111" stroke-width="3"/>
@@ -542,6 +543,7 @@ function buildCircuitSvg() {
       <text x="24" y="44" text-anchor="middle" font-size="13" font-weight="800" fill="#ffd34d" id="c-vtext">9 V</text>
     </g>
     ${resistors}
+    <g id="c-dots"></g>
     <!-- Bombilla -->
     <circle id="c-glow" cx="280" cy="110" r="60" fill="url(#glow)" opacity=".5"/>
     <g transform="translate(256 82)" shape-rendering="crispEdges">
@@ -551,7 +553,7 @@ function buildCircuitSvg() {
     </g>
     <text x="160" y="206" text-anchor="middle" font-size="15" font-weight="800" fill="#7ee08a" id="c-itext">I = 0,3 A</text>
   `;
-  circuitDots = Array.from({ length: 14 }, (_, k) => ({ s: k / 14 }));
+  circuitDots = Array.from({ length: 14 }, (_, k) => ({ s: k / 14, branch: n1.mode === 'parallel' && k % 2 === 1 }));
   const g = svg.querySelector('#c-dots');
   circuitDots.forEach(d => { d.node = svgEl('rect', { width: 8, height: 8, fill: '#7ee08a' }); g.append(d.node); });
 }
@@ -693,7 +695,7 @@ function updateLevel1() {
 function animateLevel1(dt) {
   phase += dt * n1.speed;
   circuitDots.forEach(d => {
-    const [x, y] = pointOnLoop(CIRCUIT_LOOP, d.s + phase);
+    const [x, y] = pointOnLoop(d.branch ? BRANCH_LOOP : CIRCUIT_LOOP, d.s + phase);
     d.node.setAttribute('x', (x - 4).toFixed(1));
     d.node.setAttribute('y', (y - 4).toFixed(1));
   });
