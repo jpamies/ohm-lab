@@ -12,7 +12,7 @@ const sample = {
   group: '3.º b',
   school: 'Institut Joan Oró',
   date: '2026-11-05T10:23:45Z',
-  points: [300, 460, 85]
+  points: [400, 350, 460, 85]
 };
 
 test('Normalización de campos', () => {
@@ -24,6 +24,11 @@ test('Normalización de campos', () => {
 test('Cadena canónica con el formato pedido', () => {
   assert.equal(
     canonicalString(sample),
+    'v2|LAIA PUIG|3.º B|INSTITUT JOAN ORÓ|2026-11-05T10:23:45Z|n1:400|n2:350|n3:460|n4:85'
+  );
+  // Diplomas antiguos de tres niveles
+  assert.equal(
+    canonicalString({ ...sample, points: [300, 460, 85] }),
     'v1|LAIA PUIG|3.º B|INSTITUT JOAN ORÓ|2026-11-05T10:23:45Z|n1:300|n2:460|n3:85'
   );
 });
@@ -60,7 +65,7 @@ test('Verificación: válido, datos cambiados, clave distinta', async () => {
   assert.equal((await verifyCertificate({ ...sample, name: 'LAIA PUIG' }, code, KEY)).valid, true);
   // Una letra cambiada → no coincide
   assert.equal((await verifyCertificate({ ...sample, name: 'Laia Puix' }, code, KEY)).valid, false);
-  assert.equal((await verifyCertificate({ ...sample, points: [300, 460, 86] }, code, KEY)).valid, false);
+  assert.equal((await verifyCertificate({ ...sample, points: [400, 350, 460, 86] }, code, KEY)).valid, false);
   assert.equal((await verifyCertificate({ ...sample, date: '2026-11-05T10:23:46Z' }, code, KEY)).valid, false);
   assert.equal((await verifyCertificate(sample, code, 'otra-clave')).valid, false);
   assert.equal((await verifyCertificate(sample, 'OHM-AAAA-AAAA', KEY)).valid, false);

@@ -90,7 +90,7 @@ export function sanitize(raw) {
     };
   }
   if (raw.progress && typeof raw.progress === 'object') {
-    for (const id of ['n1', 'n2', 'n3']) {
+    for (const id of ['n1', 'nc', 'n2', 'n3']) {
       const p = raw.progress[id];
       if (p && typeof p === 'object') {
         s.progress[id] = {

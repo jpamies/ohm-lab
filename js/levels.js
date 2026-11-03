@@ -1,7 +1,7 @@
-// Ohm Lab · datos y lógica de los tres niveles (sin DOM: se prueban con node --test)
+// Ohm Lab · datos y lógica de los niveles (sin DOM: se prueban con node --test)
 import { current, ledCurrent, minLedResistance, nearlyEqual, isE12, shuffle } from './physics.js';
 
-/* ───────────────────────── Nivel 1 · El agua y la corriente ───────────────────────── */
+/* ───────────────────────── Nivel 1 · El agua y la corriente (Ley de Ohm) ───────────────────────── */
 
 export const LEVEL1 = {
   voltage: { min: 1, max: 12, step: 0.5, initial: 9 },
@@ -10,20 +10,9 @@ export const LEVEL1 = {
   // Reto 3: opción múltiple. La correcta es «double».
   quizOptions: ['double', 'half', 'same', 'quadruple'],
   quizAnswer: 'double',
-  // Reto 4: serie o paralelo. La correcta es «parallel».
-  modes: ['single', 'series', 'parallel'],
-  quiz2Options: ['series', 'parallel', 'same'],
-  quiz2Answer: 'parallel',
-  targetPower: 6, // reto 5: «consigue exactamente 6 W»
-  challenges: 5
+  targetPower: 6, // reto 4: «la resistencia disipa exactamente 6 W»
+  challenges: 4
 };
-
-/** Resistencia total del montaje con dos resistencias iguales de valor r. */
-export function totalResistance(r, mode = 'single') {
-  if (mode === 'series') return 2 * r;      // Rt = R1 + R2
-  if (mode === 'parallel') return r / 2;    // 1/Rt = 1/R1 + 1/R2
-  return r;
-}
 
 /** Potencia eléctrica P = V · I (W). */
 export function power(v, i) {
@@ -35,7 +24,7 @@ export function isTargetCurrent(v, r, target = LEVEL1.targetCurrent) {
   return nearlyEqual(current(v, r), target);
 }
 
-/** Reto 5: ¿la potencia es exactamente la objetivo? (r = resistencia total) */
+/** Reto 4: ¿la potencia es exactamente la objetivo? */
 export function isTargetPower(v, r, target = LEVEL1.targetPower) {
   return nearlyEqual(power(v, current(v, r)), target);
 }
@@ -56,17 +45,72 @@ export function canHalveFrom(r0) {
 }
 
 /**
- * Puntuación del nivel 1.
- * mistakes: errores totales en las preguntas de opción múltiple; failedQuizzes: preguntas con algún error.
+ * Puntuación de un nivel de retos (niveles 1 y 2).
+ * mistakes: errores en las preguntas de opción múltiple; failedQuizzes: preguntas con algún error.
  */
-export function scoreLevel1(mistakes, failedQuizzes = Math.min(mistakes, 1)) {
-  const total = LEVEL1.challenges;
+export function scoreChallenges(total, mistakes, failedQuizzes = Math.min(mistakes, 1)) {
   const points = total * 100 - Math.min(mistakes, 4) * 25;
   const stars = mistakes === 0 ? 3 : mistakes === 1 ? 2 : 1;
   return { hits: total - failedQuizzes, total, points, stars };
 }
 
-/* ───────────────────────── Nivel 2 · ¡Salva el LED! ───────────────────────── */
+export function scoreLevel1(mistakes, failedQuizzes) {
+  return scoreChallenges(LEVEL1.challenges, mistakes, failedQuizzes);
+}
+
+/* ───────────────────────── Nivel 2 · Serie, paralelo y Kirchhoff ───────────────────────── */
+
+export const CIRCUITS = {
+  voltage: { min: 1, max: 12, step: 1, initial: 12 },
+  r1: { min: 5, max: 100, step: 5, initial: 40 },
+  r2: { min: 5, max: 100, step: 5, initial: 40 },
+  modes: ['series', 'parallel'],
+  targetTotalCurrent: 1, // reto 3: en paralelo, I total = 1 A
+  // Reto 2 (ley de las mallas): pila de 9 V, la bombilla 1 tiene 6 V → la 2 tiene 3 V
+  kvlOptions: ['v3', 'v6', 'v9', 'v15'],
+  kvlAnswer: 'v3',
+  // Reto 4 (pregunta del itinerario en PhET): dos bombillas iguales, ¿dónde brillan más?
+  brightOptions: ['series', 'parallel', 'same', 'off'],
+  brightAnswer: 'parallel',
+  challenges: 4
+};
+
+/** Circuito en serie con dos receptores: misma I, la tensión se reparte (V1 + V2 = V). */
+export function seriesCircuit(v, r1, r2) {
+  const rt = r1 + r2;
+  const i = v / rt;
+  const v1 = i * r1;
+  const v2 = i * r2;
+  return { mode: 'series', V: v, Rt: rt, I: i, items: [{ R: r1, I: i, V: v1, P: v1 * i }, { R: r2, I: i, V: v2, P: v2 * i }] };
+}
+
+/** Circuito en paralelo con dos receptores: misma V, la corriente se reparte (I = I1 + I2). */
+export function parallelCircuit(v, r1, r2) {
+  const i1 = v / r1;
+  const i2 = v / r2;
+  const rt = (r1 * r2) / (r1 + r2);
+  return { mode: 'parallel', V: v, Rt: rt, I: i1 + i2, items: [{ R: r1, I: i1, V: v, P: v * i1 }, { R: r2, I: i2, V: v, P: v * i2 }] };
+}
+
+export function solveCircuit(mode, v, r1, r2) {
+  return mode === 'parallel' ? parallelCircuit(v, r1, r2) : seriesCircuit(v, r1, r2);
+}
+
+/** Reto 1: en serie, la bombilla 1 tiene el doble de tensión que la 2. */
+export function isDoubleVoltage(c) {
+  return c.mode === 'series' && nearlyEqual(c.items[0].V, 2 * c.items[1].V);
+}
+
+/** Reto 3: en paralelo, la intensidad total es exactamente 1 A. */
+export function isTargetTotalCurrent(c, target = CIRCUITS.targetTotalCurrent) {
+  return c.mode === 'parallel' && nearlyEqual(c.I, target);
+}
+
+export function scoreCircuits(mistakes, failedQuizzes) {
+  return scoreChallenges(CIRCUITS.challenges, mistakes, failedQuizzes);
+}
+
+/* ───────────────────────── Nivel 3 · ¡Salva el LED! ───────────────────────── */
 
 export const LED = { vLed: 2, iMax: 0.02 }; // 2 V y 20 mA
 
@@ -140,98 +184,143 @@ export function prepareLevel2(rand = Math.random) {
   return shuffle(LEVEL2_ROUNDS, rand).map(r => ({ ...r, options: shuffle(r.options, rand) }));
 }
 
-/* ───────────────────────── Nivel 3 · Contrarreloj ───────────────────────── */
+/* ───────────────────────── Nivel 4 · Contrarreloj ───────────────────────── */
 
 export const LEVEL3 = { seconds: 120, tolerance: 0.02, starThresholds: [3, 6, 9] };
 
 const pick = (list, rand) => list[Math.floor(rand() * list.length)];
-const isNice = (x, decimals = 1) => nearlyEqual(Math.round(x * 10 ** decimals) / 10 ** decimals, x);
+const g = (sym, value, unit) => ({ sym, value, unit });
 
 /*
- * Cada pregunta: { unknown: 'V'|'I'|'R', unit, answer, given: { V?, I?, R? } }
- * Cada dato: { value, unit } en la unidad en que se muestra. `answer` está en `unit`.
- * `si` guarda los valores en unidades básicas (V, A, Ω) para la explicación.
+ * Cada pregunta: { kind, unknown, unit, answer, given: [{ sym, value, unit }] }
+ *  kind: 'ohm' (falta V, I o R) · 'series' (I con R1 y R2 en serie) · 'kvl' (V2 en serie)
+ *        'kcl' (I total en paralelo con I1 e I2) · 'parallel' (I total con R1 y R2 en paralelo)
+ * Todos los datos y resultados son números «redondos» (enteros o ,5) para no exigir cálculo mental difícil.
  */
 const TEMPLATES = [
-  // I en A con R en Ω (resultado entero o con un decimal sencillo)
+  // Ley de Ohm: I con R en Ω
   rand => {
     const r = pick([2, 3, 4, 5, 6, 10, 20], rand);
     const i = pick([0.5, 1, 2, 3], rand);
     const v = i * r;
     if (v > 24 || v < 1 || !Number.isInteger(v)) return null;
-    return { unknown: 'I', unit: 'A', answer: i, given: { V: { value: v, unit: 'V' }, R: { value: r, unit: 'Ω' } }, si: { V: v, I: i, R: r } };
+    return { kind: 'ohm', unknown: 'I', unit: 'A', answer: i, given: [g('V', v, 'V'), g('R', r, 'Ω')] };
   },
-  // V en V con I en A
+  // Ley de Ohm: V
   rand => {
     const r = pick([2, 3, 4, 5, 10, 20, 50, 100], rand);
     const i = pick([0.5, 1, 2, 3], rand);
     const v = i * r;
     if (v > 230 || v < 1 || !Number.isInteger(v)) return null;
-    return { unknown: 'V', unit: 'V', answer: v, given: { I: { value: i, unit: 'A' }, R: { value: r, unit: 'Ω' } }, si: { V: v, I: i, R: r } };
+    return { kind: 'ohm', unknown: 'V', unit: 'V', answer: v, given: [g('I', i, 'A'), g('R', r, 'Ω')] };
   },
-  // R en Ω con I en A
+  // Ley de Ohm: R
   rand => {
     const r = pick([2, 3, 4, 5, 6, 10, 12, 20], rand);
     const i = pick([0.5, 1, 2, 3], rand);
     const v = i * r;
     if (v > 24 || v < 1 || !Number.isInteger(v)) return null;
-    return { unknown: 'R', unit: 'Ω', answer: r, given: { V: { value: v, unit: 'V' }, I: { value: i, unit: 'A' } }, si: { V: v, I: i, R: r } };
+    return { kind: 'ohm', unknown: 'R', unit: 'Ω', answer: r, given: [g('V', v, 'V'), g('I', i, 'A')] };
   },
-  // Conversión: I en mA con R en kΩ (V en V / R en kΩ = I en mA)
+  // Conversión: I en mA con R en kΩ
   rand => {
     const rk = pick([1, 2, 3, 4, 5, 10], rand);
     const imA = pick([1, 2, 3, 4, 5, 10], rand);
     const v = imA * rk;
     if (v > 24 || v < 2) return null;
-    return { unknown: 'I', unit: 'mA', answer: imA, given: { V: { value: v, unit: 'V' }, R: { value: rk, unit: 'kΩ' } }, si: { V: v, I: imA / 1000, R: rk * 1000 } };
+    return { kind: 'ohm', unknown: 'I', unit: 'mA', answer: imA, given: [g('V', v, 'V'), g('R', rk, 'kΩ')] };
   },
   // Conversión: R en Ω con I en mA
   rand => {
     const r = pick([100, 200, 300, 400, 500, 600], rand);
     const imA = pick([10, 20, 30, 50], rand);
-    const v = (imA / 1000) * r;
-    if (v > 24 || v < 1 || !Number.isInteger(Math.round(v * 1e6) / 1e6)) return null;
-    return { unknown: 'R', unit: 'Ω', answer: r, given: { V: { value: v, unit: 'V' }, I: { value: imA, unit: 'mA' } }, si: { V: v, I: imA / 1000, R: r } };
+    const v = Math.round((imA / 1000) * r * 1e6) / 1e6;
+    if (v > 24 || v < 1 || !Number.isInteger(v)) return null;
+    return { kind: 'ohm', unknown: 'R', unit: 'Ω', answer: r, given: [g('V', v, 'V'), g('I', imA, 'mA')] };
   },
-  // Conversión: V con I en mA y R en kΩ
+  // Serie: R total = R1 + R2 → I
   rand => {
-    const rk = pick([1, 2, 3, 5, 10], rand);
-    const imA = pick([1, 2, 3, 5], rand);
-    const v = imA * rk;
-    if (v > 24 || v < 1) return null;
-    return { unknown: 'V', unit: 'V', answer: v, given: { I: { value: imA, unit: 'mA' }, R: { value: rk, unit: 'kΩ' } }, si: { V: v, I: imA / 1000, R: rk * 1000 } };
+    const r1 = pick([2, 4, 5, 6, 10, 20], rand);
+    const r2 = pick([2, 4, 5, 6, 10, 20], rand);
+    const i = pick([0.5, 1, 2], rand);
+    const v = i * (r1 + r2);
+    if (v > 24 || !Number.isInteger(v)) return null;
+    return { kind: 'series', unknown: 'I', unit: 'A', answer: i, given: [g('V', v, 'V'), g('R₁', r1, 'Ω'), g('R₂', r2, 'Ω')] };
+  },
+  // Serie (Kirchhoff, mallas): V2 = V − V1
+  rand => {
+    const v = pick([6, 9, 12, 24], rand);
+    const v1 = pick([1, 2, 3, 4, 5, 6, 8, 10, 15, 18], rand);
+    if (v1 >= v) return null;
+    return { kind: 'kvl', unknown: 'V₂', unit: 'V', answer: v - v1, given: [g('V', v, 'V'), g('V₁', v1, 'V')] };
+  },
+  // Paralelo (Kirchhoff, nudos): I = I1 + I2
+  rand => {
+    const i1 = pick([0.5, 1, 1.5, 2, 3], rand);
+    const i2 = pick([0.5, 1, 2, 2.5, 4], rand);
+    return { kind: 'kcl', unknown: 'I', unit: 'A', answer: i1 + i2, given: [g('I₁', i1, 'A'), g('I₂', i2, 'A')] };
+  },
+  // Paralelo: I1 = V/R1, I2 = V/R2, I = I1 + I2
+  rand => {
+    const v = pick([6, 12], rand);
+    const r1 = pick([2, 3, 4, 6, 12], rand);
+    const r2 = pick([2, 3, 4, 6, 12], rand);
+    const i = v / r1 + v / r2;
+    if (!Number.isInteger(i * 2)) return null;
+    return { kind: 'parallel', unknown: 'I', unit: 'A', answer: i, given: [g('V', v, 'V'), g('R₁', r1, 'Ω'), g('R₂', r2, 'Ω')] };
   }
 ];
+
+const OHM_TEMPLATES = 5;
+const OHM_SHARE = 0.6;
 
 /** Genera una pregunta aleatoria (evita repetir la anterior). */
 export function generateQuestion(rand = Math.random, previous = null) {
   for (let attempt = 0; attempt < 500; attempt++) {
-    const q = pick(TEMPLATES, rand)(rand);
+    // Primero se elige el tipo (60 % Ley de Ohm, 40 % serie/paralelo/Kirchhoff) y después
+    // se reintenta esa misma plantilla: así las plantillas con más descartes no pierden peso.
+    const ohm = rand() < OHM_SHARE;
+    const template = ohm ? pick(TEMPLATES.slice(0, OHM_TEMPLATES), rand) : pick(TEMPLATES.slice(OHM_TEMPLATES), rand);
+    let q = null;
+    for (let k = 0; k < 50 && !q; k++) q = template(rand);
     if (!q) continue;
     q.answer = Math.round(q.answer * 1e6) / 1e6;
     if (previous && questionKey(previous) === questionKey(q)) continue;
     return q;
   }
-  // Respaldo determinista (no debería llegar aquí)
-  return { unknown: 'I', unit: 'A', answer: 0.3, given: { V: { value: 9, unit: 'V' }, R: { value: 30, unit: 'Ω' } }, si: { V: 9, I: 0.3, R: 30 } };
+  return { kind: 'ohm', unknown: 'I', unit: 'A', answer: 3, given: [g('V', 9, 'V'), g('R', 3, 'Ω')] };
 }
 
 export function questionKey(q) {
-  return [q.unknown, q.unit, ...Object.entries(q.given).map(([k, g]) => `${k}${g.value}${g.unit}`)].join('|');
+  return [q.kind, q.unknown, q.unit, ...q.given.map(x => `${x.sym}${x.value}${x.unit}`)].join('|');
 }
 
-/** Comprueba que los datos de la pregunta cumplen V = I · R. */
+/** Valor del dato en unidades básicas (V, A, Ω). */
+export function toSI(x) {
+  if (x.unit === 'mA') return x.value / 1000;
+  if (x.unit === 'kΩ') return x.value * 1000;
+  return x.value;
+}
+
+/** Resuelve la pregunta a partir de los datos (independiente de cómo se generó). Devuelve la respuesta en q.unit. */
+export function solveQuestion(q) {
+  const d = Object.fromEntries(q.given.map(x => [x.sym, toSI(x)]));
+  let si;
+  if (q.kind === 'ohm') {
+    if (q.unknown === 'I') si = d.V / d.R;
+    else if (q.unknown === 'V') si = d.I * d.R;
+    else si = d.V / d.I;
+  } else if (q.kind === 'series') si = d.V / (d['R₁'] + d['R₂']);
+  else if (q.kind === 'kvl') si = d.V - d['V₁'];
+  else if (q.kind === 'kcl') si = d['I₁'] + d['I₂'];
+  else if (q.kind === 'parallel') si = d.V / d['R₁'] + d.V / d['R₂'];
+  if (q.unit === 'mA') return si * 1000;
+  if (q.unit === 'kΩ') return si / 1000;
+  return si;
+}
+
 export function isConsistent(q) {
-  const toSI = (g, sym) => {
-    if (!g) return null;
-    if (g.unit === 'mA') return g.value / 1000;
-    if (g.unit === 'kΩ') return g.value * 1000;
-    return g.value;
-  };
-  const V = q.unknown === 'V' ? q.answer : toSI(q.given.V, 'V');
-  const I = q.unknown === 'I' ? (q.unit === 'mA' ? q.answer / 1000 : q.answer) : toSI(q.given.I, 'I');
-  const R = q.unknown === 'R' ? (q.unit === 'kΩ' ? q.answer * 1000 : q.answer) : toSI(q.given.R, 'R');
-  return nearlyEqual(V, I * R, 1e-6);
+  return nearlyEqual(solveQuestion(q), q.answer, 1e-6);
 }
 
 /** Puntos por acierto en la contrarreloj: 10 + 5 de bonus a partir de una racha de 3. */
@@ -249,7 +338,8 @@ export function starsLevel3(correct) {
 
 /* ───────────────────────── Común ───────────────────────── */
 
-export const LEVEL_IDS = ['n1', 'n2', 'n3'];
+// Orden de juego. Los identificadores se conservan por compatibilidad: n1 Ohm, nc circuitos, n2 LED, n3 contrarreloj.
+export const LEVEL_IDS = ['n1', 'nc', 'n2', 'n3'];
 
 /** Un nivel está desbloqueado si el anterior está completado. */
 export function isUnlocked(progress, levelId) {

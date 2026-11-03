@@ -20,8 +20,9 @@
     </a>
     <div class="progress" id="progress" role="img" aria-label="">
       <span class="pblock" data-level="n1">1</span>
-      <span class="pblock" data-level="n2">2</span>
-      <span class="pblock" data-level="n3">3</span>
+      <span class="pblock" data-level="nc">2</span>
+      <span class="pblock" data-level="n2">3</span>
+      <span class="pblock" data-level="n3">4</span>
     </div>
     <div class="top-actions">
       <button type="button" class="btn btn-small btn-stone" id="lang-btn" data-i18n-aria="lang.switchLabel">Català</button>
@@ -114,6 +115,7 @@
           <svg id="n1-water" viewBox="0 0 320 220" role="img"></svg>
         </figure>
       </div>
+      <p class="fig-legend" data-i18n="n1.legend"></p>
 
       <div class="panel controls">
         <div class="slider">
@@ -124,7 +126,6 @@
           <label for="n1-r"><span data-i18n="n1.resistance"></span> <output id="n1-r-out" for="n1-r"></output></label>
           <input type="range" id="n1-r">
         </div>
-        <div class="modes-box" id="n1-modes" hidden></div>
         <p class="calc" id="n1-calc" aria-live="polite"></p>
         <p class="calc calc-power" id="n1-power"></p>
       </div>
@@ -134,11 +135,57 @@
       <div class="level-done" id="n1-done" hidden></div>
     </section>
 
-    <!-- ───────── Nivel 2 ───────── -->
+    <!-- ───────── Nivel 2 · Serie, paralelo y Kirchhoff ───────── -->
+    <section class="screen" id="screen-nc" hidden>
+      <div class="level-head">
+        <button type="button" class="btn btn-small btn-stone back" data-i18n="map.back"></button>
+        <h1 class="pixel h-level"><span class="lvl-tag">2</span> <span data-i18n="level.nc.name"></span></h1>
+      </div>
+      <p class="panel intro" data-i18n="nc.intro"></p>
+
+      <div class="modes-box">
+        <p class="pixel modes-label" id="nc-modes-label" data-i18n="nc.mode"></p>
+        <div class="modes" id="nc-modes" role="radiogroup" aria-labelledby="nc-modes-label"></div>
+      </div>
+
+      <div class="n1-grid">
+        <figure class="panel scene">
+          <figcaption class="pixel h-fig" data-i18n="n1.circuit"></figcaption>
+          <svg id="nc-circuit" viewBox="0 0 320 220" role="img"></svg>
+        </figure>
+        <figure class="panel scene">
+          <figcaption class="pixel h-fig" data-i18n="n1.water"></figcaption>
+          <svg id="nc-water" viewBox="0 0 320 220" role="img"></svg>
+        </figure>
+      </div>
+      <p class="fig-legend" id="nc-legend" aria-live="polite"></p>
+
+      <div class="panel controls">
+        <div class="slider">
+          <label for="nc-v"><span data-i18n="nc.voltage"></span> <output id="nc-v-out" for="nc-v"></output></label>
+          <input type="range" id="nc-v">
+        </div>
+        <div class="slider">
+          <label for="nc-r1"><span data-i18n="nc.r1"></span> <output id="nc-r1-out" for="nc-r1"></output></label>
+          <input type="range" id="nc-r1">
+        </div>
+        <div class="slider">
+          <label for="nc-r2"><span data-i18n="nc.r2"></span> <output id="nc-r2-out" for="nc-r2"></output></label>
+          <input type="range" id="nc-r2">
+        </div>
+        <div class="calc-lines" id="nc-calc" aria-live="polite"></div>
+      </div>
+
+      <h2 class="pixel h-section" data-i18n="n1.challenges"></h2>
+      <ol class="challenges" id="nc-challenges"></ol>
+      <div class="level-done" id="nc-done" hidden></div>
+    </section>
+
+    <!-- ───────── Nivel 3 · LED ───────── -->
     <section class="screen" id="screen-n2" hidden>
       <div class="level-head">
         <button type="button" class="btn btn-small btn-stone back" data-i18n="map.back"></button>
-        <h1 class="pixel h-level"><span class="lvl-tag">2</span> <span data-i18n="level.n2.name"></span></h1>
+        <h1 class="pixel h-level"><span class="lvl-tag">3</span> <span data-i18n="level.n2.name"></span></h1>
       </div>
       <p class="panel intro" data-i18n="n2.intro"></p>
       <div class="n2-game panel" id="n2-game">
@@ -156,11 +203,11 @@
       <div class="level-done" id="n2-done" hidden></div>
     </section>
 
-    <!-- ───────── Nivel 3 ───────── -->
+    <!-- ───────── Nivel 4 · Cuenta atrás ───────── -->
     <section class="screen" id="screen-n3" hidden>
       <div class="level-head">
         <button type="button" class="btn btn-small btn-stone back" data-i18n="map.back"></button>
-        <h1 class="pixel h-level"><span class="lvl-tag">3</span> <span data-i18n="level.n3.name"></span></h1>
+        <h1 class="pixel h-level"><span class="lvl-tag">4</span> <span data-i18n="level.n3.name"></span></h1>
       </div>
       <p class="panel intro" data-i18n="n3.intro"></p>
       <div class="panel n3-ready" id="n3-ready">
@@ -174,6 +221,7 @@
         </div>
         <div class="timebar" aria-hidden="true"><span id="n3-bar"></span></div>
         <p class="pixel n3-find" id="n3-find"></p>
+        <p class="n3-ctx" id="n3-ctx" hidden></p>
         <div class="given" id="n3-given"></div>
         <form id="n3-form" class="n3-form" autocomplete="off">
           <label for="n3-input" id="n3-label"></label>
@@ -233,6 +281,8 @@
       <li data-i18n="help.led"></li>
       <li data-i18n="help.P"></li>
       <li data-i18n="help.assoc"></li>
+      <li data-i18n="help.assoc2"></li>
+      <li data-i18n="help.kirchhoff"></li>
     </ul>
     <form method="dialog"><button class="btn btn-grass" data-i18n="help.close"></button></form>
   </dialog>

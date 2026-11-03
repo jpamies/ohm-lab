@@ -19,18 +19,19 @@ export function isoSeconds(date) {
   return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
-/** v1|NOMBRE|GRUPO|CENTRO|fechaISO|n1:pts|n2:pts|n3:pts */
+/**
+ * Cadena canónica: v2|NOMBRE|GRUPO|CENTRO|fechaISO|n1:pts|n2:pts|n3:pts|n4:pts (cuatro niveles).
+ * Los diplomas de la primera versión, con tres niveles, usan «v1» y n1..n3.
+ */
 export function canonicalString(data) {
-  const [p1, p2, p3] = data.points.map(p => Math.round(Number(p)) || 0);
+  const points = data.points.map(p => Math.round(Number(p)) || 0);
   return [
-    'v1',
+    points.length === 3 ? 'v1' : 'v2',
     normalizeField(data.name),
     normalizeField(data.group),
     normalizeField(data.school),
     data.date,
-    `n1:${p1}`,
-    `n2:${p2}`,
-    `n3:${p3}`
+    ...points.map((p, k) => `n${k + 1}:${p}`)
   ].join('|');
 }
 
@@ -119,7 +120,7 @@ export function decodePayload(text) {
     const match = s.match(/(?:^|[#&?])d=([A-Za-z0-9_-]+)/) || s.match(/^([A-Za-z0-9_-]{20,})$/);
     if (!match) return null;
     const obj = JSON.parse(new TextDecoder().decode(base64UrlToBytes(match[1])));
-    if (obj.v !== 1 || !Array.isArray(obj.p) || obj.p.length !== 3) return null;
+    if (obj.v !== 1 || !Array.isArray(obj.p) || ![3, 4].includes(obj.p.length)) return null;
     return {
       data: {
         name: String(obj.n ?? ''),
@@ -262,7 +263,8 @@ export function buildDiplomaPdf(opts) {
   doc.setTextColor(...C.ink);
   const who = [texts.groupLabel + ' ' + data.group, data.school ? data.school : null].filter(Boolean).join('  ·  ');
   doc.text(who, W / 2, 80, { align: 'center', maxWidth: W - 60 });
-  doc.text(texts.reason, W / 2, 88, { align: 'center', maxWidth: W - 70 });
+  doc.setFontSize(11.5);
+  doc.text(texts.reason, W / 2, 88, { align: 'center', maxWidth: W - 50 });
 
   // Tabla de resultados
   const tx = 30;
@@ -344,6 +346,7 @@ export function buildDiplomaPdf(opts) {
 
 export const BADGES = {
   n1: { colors: ['#3fa9f5', '#1c6fd1', '#0d3f80'], ribbon: ['#3fa9f5', '#1c6fd1'], icon: 'drop' },
+  nc: { colors: ['#6fe08a', '#2f9e44', '#14532d'], ribbon: ['#ffd34d', '#c99a00'], icon: 'bolt' },
   n2: { colors: ['#ff6b6b', '#d93a3a', '#7a1414'], ribbon: ['#ff9b3d', '#d9631a'], icon: 'led' },
   n3: { colors: ['#a07bff', '#6c3bff', '#38198f'], ribbon: ['#b84dff', '#7a22c9'], icon: 'omega' }
 };
@@ -377,6 +380,20 @@ const SPRITES = {
     '...X....X...',
     '...X....X...',
     '...X........'
+  ],
+  bolt: [
+    '......XXXX..',
+    '.....XXXX...',
+    '....XXXX....',
+    '...XXXX.....',
+    '..XXXXXXXX..',
+    '..XXXXXXXX..',
+    '.....XXXX...',
+    '....XXXX....',
+    '...XXXX.....',
+    '..XXX.......',
+    '..XX........',
+    '..X.........'
   ],
   omega: [
     '...XXXXXX...',

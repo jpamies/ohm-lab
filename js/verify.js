@@ -24,6 +24,7 @@ function fillForm(data, code) {
   $('#v-p1').value = data.points[0];
   $('#v-p2').value = data.points[1];
   $('#v-p3').value = data.points[2];
+  $('#v-p4').value = data.points[3] ?? '';
   $('#v-code').value = code;
 }
 
@@ -42,6 +43,7 @@ function showResult(data, result) {
     [t('verify.p1'), data.points[0]],
     [t('verify.p2'), data.points[1]],
     [t('verify.p3'), data.points[2]],
+    ...(data.points.length > 3 ? [[t('verify.p4'), data.points[3]]] : []),
     [t('verify.total'), data.points.reduce((a, b) => a + b, 0)],
     [t('verify.code'), result.given || '—']
   ];
@@ -96,7 +98,8 @@ $('#manual-form').addEventListener('submit', e => {
     group: $('#v-group').value,
     school: $('#v-school').value,
     date: $('#v-date').value.trim(),
-    points: [num('#v-p1'), num('#v-p2'), num('#v-p3')]
+    // Diplomas antiguos (3 niveles) dejan el nivel 4 vacío.
+    points: [num('#v-p1'), num('#v-p2'), num('#v-p3'), ...($('#v-p4').value.trim() === '' ? [] : [num('#v-p4')])]
   };
   check(data, $('#v-code').value);
 });
