@@ -573,7 +573,7 @@ function onSliderL1() {
 $('#n1-v').addEventListener('input', onSliderL1);
 $('#n1-r').addEventListener('input', onSliderL1);
 
-/* ═══════════════════════ Nivel 2 · Serie, paralelo y Kirchhoff ═══════════════════════ */
+/* ═══════════════════════ Nivel 2 · Serie y paralelo ═══════════════════════ */
 
 const nc = { state: freshChallengeState() };
 const LC = {
@@ -650,7 +650,7 @@ function updateCircuits() {
   $('#nc-r2').setAttribute('aria-valuetext', `${P.r2} Ω`);
 
   const series = nc.mode === 'series';
-  const lines = series ? ['nc.s1', 'nc.s2', 'nc.s3', 'nc.s4'] : ['nc.p1', 'nc.p2', 'nc.p3', 'nc.p4'];
+  const lines = series ? ['nc.s1', 'nc.s2', 'nc.s3', 'nc.s4'] : ['nc.p1', 'nc.p2', 'nc.p3'];
   const calc = $('#nc-calc');
   calc.innerHTML = '';
   lines.forEach((key, k) => calc.append(el('p', { class: `calc ${k === 3 - (series ? 0 : 1) ? 'calc-law' : ''}`, text: t(key, P) })));

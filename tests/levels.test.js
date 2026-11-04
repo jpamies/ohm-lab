@@ -47,7 +47,7 @@ test('Nivel 1 · opción múltiple, potencia y puntuación', () => {
   assert.equal(scoreLevel1(3, 1).stars, 1);
 });
 
-test('Nivel 2 · serie: misma intensidad y V1 + V2 = V (ley de las mallas)', () => {
+test('Nivel 2 · serie: misma intensidad y V1 + V2 = V (la tensión se reparte)', () => {
   const c = seriesCircuit(12, 40, 20);
   assert.equal(c.Rt, 60);
   assert.ok(nearlyEqual(c.I, 0.2));
@@ -60,7 +60,7 @@ test('Nivel 2 · serie: misma intensidad y V1 + V2 = V (ley de las mallas)', () 
   }
 });
 
-test('Nivel 2 · paralelo: misma tensión e I = I1 + I2 (ley de los nudos)', () => {
+test('Nivel 2 · paralelo: misma tensión e I = I1 + I2 (la intensidad total es la suma de las ramas)', () => {
   const c = parallelCircuit(12, 40, 20);
   assert.ok(nearlyEqual(c.items[0].I, 0.3));
   assert.ok(nearlyEqual(c.items[1].I, 0.6));
@@ -181,4 +181,15 @@ test('Orden y desbloqueo de los cuatro niveles', () => {
   const all = { n1: { done: true }, nc: { done: true }, n2: { done: true }, n3: { done: true } };
   assert.ok(allDone(all));
   assert.ok(!allDone({ ...all, nc: undefined }));
+});
+
+test('Ningún texto de la app nombra a Kirchhoff ni usa fórmulas fuera del nivel de 3.º ESO', async () => {
+  const { STRINGS } = await import('../js/i18n.js');
+  for (const lang of ['es', 'ca']) {
+    for (const [key, text] of Object.entries(STRINGS[lang])) {
+      assert.ok(!/kirch/i.test(text), `${lang}.${key} nombra a Kirchhoff`);
+      assert.ok(!/malla|nudo|\bnus\b|nusos|malles/i.test(text), `${lang}.${key} usa mallas o nudos`);
+      assert.ok(!text.includes('R₁ · R₂'), `${lang}.${key} usa la fórmula de la resistencia en paralelo`);
+    }
+  }
 });

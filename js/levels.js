@@ -58,7 +58,7 @@ export function scoreLevel1(mistakes, failedQuizzes) {
   return scoreChallenges(LEVEL1.challenges, mistakes, failedQuizzes);
 }
 
-/* ───────────────────────── Nivel 2 · Serie, paralelo y Kirchhoff ───────────────────────── */
+/* ───────────────────────── Nivel 2 · Serie y paralelo ───────────────────────── */
 
 export const CIRCUITS = {
   voltage: { min: 1, max: 12, step: 1, initial: 12 },
@@ -66,7 +66,7 @@ export const CIRCUITS = {
   r2: { min: 5, max: 100, step: 5, initial: 40 },
   modes: ['series', 'parallel'],
   targetTotalCurrent: 1, // reto 3: en paralelo, I total = 1 A
-  // Reto 2 (ley de las mallas): pila de 9 V, la bombilla 1 tiene 6 V → la 2 tiene 3 V
+  // Reto 2 (en serie la tensión se reparte): pila de 9 V, la bombilla 1 tiene 6 V → la 2 tiene 3 V
   kvlOptions: ['v3', 'v6', 'v9', 'v15'],
   kvlAnswer: 'v3',
   // Reto 4 (pregunta del itinerario en PhET): dos bombillas iguales, ¿dónde brillan más?
@@ -247,14 +247,14 @@ const TEMPLATES = [
     if (v > 24 || !Number.isInteger(v)) return null;
     return { kind: 'series', unknown: 'I', unit: 'A', answer: i, given: [g('V', v, 'V'), g('R₁', r1, 'Ω'), g('R₂', r2, 'Ω')] };
   },
-  // Serie (Kirchhoff, mallas): V2 = V − V1
+  // Serie, la tensión se reparte: V2 = V − V1
   rand => {
     const v = pick([6, 9, 12, 24], rand);
     const v1 = pick([1, 2, 3, 4, 5, 6, 8, 10, 15, 18], rand);
     if (v1 >= v) return null;
     return { kind: 'kvl', unknown: 'V₂', unit: 'V', answer: v - v1, given: [g('V', v, 'V'), g('V₁', v1, 'V')] };
   },
-  // Paralelo (Kirchhoff, nudos): I = I1 + I2
+  // Paralelo, la intensidad total es la suma de la de cada rama: I = I1 + I2
   rand => {
     const i1 = pick([0.5, 1, 1.5, 2, 3], rand);
     const i2 = pick([0.5, 1, 2, 2.5, 4], rand);
@@ -277,7 +277,7 @@ const OHM_SHARE = 0.6;
 /** Genera una pregunta aleatoria (evita repetir la anterior). */
 export function generateQuestion(rand = Math.random, previous = null) {
   for (let attempt = 0; attempt < 500; attempt++) {
-    // Primero se elige el tipo (60 % Ley de Ohm, 40 % serie/paralelo/Kirchhoff) y después
+    // Primero se elige el tipo (60 % Ley de Ohm, 40 % serie y paralelo) y después
     // se reintenta esa misma plantilla: así las plantillas con más descartes no pierden peso.
     const ohm = rand() < OHM_SHARE;
     const template = ohm ? pick(TEMPLATES.slice(0, OHM_TEMPLATES), rand) : pick(TEMPLATES.slice(OHM_TEMPLATES), rand);
